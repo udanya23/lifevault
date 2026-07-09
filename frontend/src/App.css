@@ -1,0 +1,8 @@
+/*
+ * src/App.css — Intentionally minimal.
+ *
+ * All styles have been migrated to the Tailwind v4 design system in:
+ *   src/styles/index.css
+ *
+ * This file is kept to avoid import errors in App.jsx if present.
+ */

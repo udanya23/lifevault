@@ -1,0 +1,9 @@
+/*
+ * src/index.css — Intentionally minimal.
+ *
+ * All design tokens, Tailwind imports, and global styles live in:
+ *   src/styles/index.css  (the real entrypoint, imported in main.jsx)
+ *
+ * This file is kept to avoid build errors from legacy references.
+ * Do NOT add styles here — use src/styles/index.css instead.
+ */
