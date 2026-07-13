@@ -38,32 +38,26 @@ exports.getEmergencyInfo = async (req, res, next) => {
 
     // Prefer the real public client IP (not Render's private 10.x hop)
     const scannerIp = getClientIp(req);
+    const userAgent = req.headers['user-agent'] || 'Unknown';
 
-    // Log scan asynchronously — don't block the response
-    QRScan.create({
-      userId: user._id,
-      scannerIp,
-      scannerCity: 'Unknown',
-      scannerRegion: 'Unknown',
-      scannerCountry: 'Unknown',
-      scannerArea: 'Unknown',
-      userAgent: req.headers['user-agent'] || 'Unknown',
-    })
-      .then(async (created) => {
-        try {
-          const geo = await getIpGeolocation(scannerIp);
-          if (!geo) return;
-
-          created.scannerCity = geo.city || 'Unknown';
-          created.scannerRegion = geo.regionName || 'Unknown';
-          created.scannerCountry = geo.country || 'Unknown';
-          created.scannerArea = geo.area || 'Unknown';
-          await created.save();
-        } catch {
-          // Ignore geo lookup failures; the scan record still exists.
-        }
-      })
-      .catch((err) => console.error('QR scan log failed:', err.message));
+    // Resolve location first (HTTPS providers), then save one complete scan record.
+    // Keep this off the request critical path so the emergency page still loads fast.
+    (async () => {
+      try {
+        const geo = await getIpGeolocation(scannerIp);
+        await QRScan.create({
+          userId: user._id,
+          scannerIp,
+          scannerCity: geo?.city || 'Unknown',
+          scannerRegion: geo?.regionName || 'Unknown',
+          scannerCountry: geo?.country || 'Unknown',
+          scannerArea: geo?.area || 'Unknown',
+          userAgent,
+        });
+      } catch (err) {
+        console.error('QR scan log failed:', err.message);
+      }
+    })();
 
     // Strict field whitelist — only life-saving data
     const emergencyData = {

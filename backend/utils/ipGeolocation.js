@@ -3,7 +3,8 @@
  *
  * Behind Render/proxies, req.ip is often a private 10.x address.
  * We extract the first public IP from X-Forwarded-For, then look up
- * city/region via ip-api.com (no API key; free-tier rate limits apply).
+ * city/region via HTTPS providers (ip-api free tier is HTTP-only and
+ * often blocked on Render).
  */
 
 const GEO_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
@@ -23,7 +24,6 @@ const isPrivateOrLocalIp = (ip) => {
   if (value.startsWith('10.')) return true;
   if (value.startsWith('192.168.')) return true;
   if (value.startsWith('169.254.')) return true;
-  // 172.16.0.0 – 172.31.255.255
   const m = value.match(/^172\.(\d+)\./);
   if (m) {
     const second = parseInt(m[1], 10);
@@ -51,12 +51,8 @@ const getClientIp = (req) => {
   if (req.socket?.remoteAddress) candidates.push(String(req.socket.remoteAddress));
 
   const normalized = candidates.map(normalizeIp).filter(Boolean);
-
-  // Prefer first public IP in the chain (original client)
   const publicIp = normalized.find((ip) => !isPrivateOrLocalIp(ip));
   if (publicIp) return publicIp;
-
-  // Fall back to whatever we have (may stay Unknown for geo)
   return normalized[0] || 'Unknown';
 };
 
@@ -68,6 +64,58 @@ const buildArea = ({ city, regionName, country }) => {
   return parts.join(', ');
 };
 
+const fetchJson = async (url, timeoutMs = 4000) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+/** Provider 1: ipwho.is (HTTPS, free, no key) */
+const lookupIpWhoIs = async (ip) => {
+  const data = await fetchJson(`https://ipwho.is/${encodeURIComponent(ip)}`);
+  if (!data || data.success === false) return null;
+  return {
+    city: data.city || '',
+    regionName: data.region || data.region_code || '',
+    country: data.country || '',
+  };
+};
+
+/** Provider 2: geojs.io (HTTPS, free, no key) */
+const lookupGeoJs = async (ip) => {
+  const data = await fetchJson(
+    `https://get.geojs.io/v1/ip/geo/${encodeURIComponent(ip)}.json`
+  );
+  if (!data || data.error) return null;
+  return {
+    city: data.city || '',
+    regionName: data.region || '',
+    country: data.country || '',
+  };
+};
+
+/** Provider 3: ipapi.co (HTTPS, free with rate limits) */
+const lookupIpApiCo = async (ip) => {
+  const data = await fetchJson(`https://ipapi.co/${encodeURIComponent(ip)}/json/`);
+  if (!data || data.error) return null;
+  return {
+    city: data.city || '',
+    regionName: data.region || '',
+    country: data.country_name || data.country || '',
+  };
+};
+
 const getIpGeolocation = async (rawIp) => {
   const ip = normalizeIp(rawIp);
   if (isPrivateOrLocalIp(ip)) return null;
@@ -76,38 +124,31 @@ const getIpGeolocation = async (rawIp) => {
   const cached = cache.get(ip);
   if (cached && cached.expiresAt > now) return cached.value;
 
-  const url =
-    `https://ip-api.com/json/${encodeURIComponent(ip)}` +
-    `?fields=status,message,country,regionName,city`;
+  const providers = [lookupIpWhoIs, lookupGeoJs, lookupIpApiCo];
+  let geo = null;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3500);
-
-  try {
-    const resp = await fetch(url, { signal: controller.signal });
-    const data = await resp.json();
-
-    if (!data || data.status !== 'success') return null;
-
-    const value = {
-      city: data.city || '',
-      regionName: data.regionName || '',
-      country: data.country || '',
-      area:
-        buildArea({
-          city: data.city || '',
-          regionName: data.regionName || '',
-          country: data.country || '',
-        }) || '',
-    };
-
-    cache.set(ip, { value, expiresAt: now + GEO_CACHE_MAX_AGE_MS });
-    return value;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
+  for (const provider of providers) {
+    try {
+      geo = await provider(ip);
+      if (geo && (geo.city || geo.regionName || geo.country)) break;
+    } catch {
+      // try next provider
+    }
   }
+
+  if (!geo) return null;
+
+  const value = {
+    city: geo.city || '',
+    regionName: geo.regionName || '',
+    country: geo.country || '',
+    area: buildArea(geo) || '',
+  };
+
+  if (!value.area) return null;
+
+  cache.set(ip, { value, expiresAt: now + GEO_CACHE_MAX_AGE_MS });
+  return value;
 };
 
 module.exports = {
