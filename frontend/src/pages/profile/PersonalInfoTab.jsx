@@ -13,7 +13,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { FaCamera, FaUser, FaEnvelope, FaCalendarAlt, FaRuler, FaWeight, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaCamera, FaUser, FaEnvelope, FaCalendarAlt, FaRuler, FaWeight, FaMapMarkerAlt, FaLeaf } from 'react-icons/fa';
 
 import {
   updateProfileDetails,
@@ -54,6 +54,7 @@ const schema = yup.object().shape({
     pincode: yup.string().trim().max(15, 'Invalid Pincode length'),
     country: yup.string().trim().max(50, 'Country is too long'),
   }),
+  isOrganDonor: yup.boolean(),
 });
 
 const PersonalInfoTab = () => {
@@ -97,6 +98,7 @@ const PersonalInfoTab = () => {
       height: '',
       weight: '',
       address: { street: '', city: '', state: '', pincode: '', country: '' },
+      isOrganDonor: false,
     },
   });
 
@@ -115,6 +117,7 @@ const PersonalInfoTab = () => {
           pincode: profile.address?.pincode || '',
           country: profile.address?.country || '',
         },
+        isOrganDonor: profile.isOrganDonor || false,
       });
     }
   }, [profile, reset]);
@@ -309,6 +312,29 @@ const PersonalInfoTab = () => {
               {...register('address.country')}
             />
           </div>
+        </div>
+
+        {/* Organ Donor Status */}
+        <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40">
+          <div className="flex items-start gap-3">
+            <FaLeaf className="text-emerald-500 mt-0.5 shrink-0" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                Organ Donor
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                Displayed on your emergency QR profile to notify first responders and medical teams.
+              </p>
+            </div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              {...register('isOrganDonor')}
+            />
+            <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:ring-2 peer-focus:ring-emerald-400/40 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500" />
+          </label>
         </div>
 
         {/* Submit Actions */}

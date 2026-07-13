@@ -66,6 +66,7 @@ exports.getEmergencyInfo = async (req, res, next) => {
       bloodGroup: profile?.bloodGroup && profile.bloodGroup !== 'unknown'
         ? profile.bloodGroup
         : null,
+      isOrganDonor: profile?.isOrganDonor || false,
       emergencyContacts: contacts.map((c) => ({
         name: c.name,
         relationship: c.relationship,
@@ -73,9 +74,11 @@ exports.getEmergencyInfo = async (req, res, next) => {
         isPrimary: c.isPrimary,
       })),
       allergies: medicalInfo?.allergies?.length ? medicalInfo.allergies : [],
+      chronicDiseases: medicalInfo?.chronicDiseases?.length ? medicalInfo.chronicDiseases : [],
       currentMedicines: medicalInfo?.currentMedicines?.length
         ? medicalInfo.currentMedicines
         : [],
+      medicalNotes: medicalInfo?.medicalNotes || '',
     };
 
     new ApiResponse(200, 'Emergency information retrieved', emergencyData).send(res);

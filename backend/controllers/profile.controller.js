@@ -29,6 +29,7 @@ exports.getProfile = async (req, res, next) => {
         height: null,
         weight: null,
         address: { street: '', city: '', state: '', pincode: '', country: '' },
+        isOrganDonor: false,
       };
     }
 
@@ -42,7 +43,7 @@ exports.getProfile = async (req, res, next) => {
 
 exports.updateProfile = async (req, res, next) => {
   const userId = req.user._id;
-  const { dob, gender, bloodGroup, height, weight, address } = req.body;
+  const { dob, gender, bloodGroup, height, weight, address, isOrganDonor } = req.body;
 
   try {
     // 1. Update or create the profile
@@ -57,6 +58,7 @@ exports.updateProfile = async (req, res, next) => {
         height,
         weight,
         address,
+        isOrganDonor: isOrganDonor ?? false,
       });
     } else {
       profile.dob = dob !== undefined ? dob : profile.dob;
@@ -65,6 +67,7 @@ exports.updateProfile = async (req, res, next) => {
       profile.height = height !== undefined ? height : profile.height;
       profile.weight = weight !== undefined ? weight : profile.weight;
       profile.address = address !== undefined ? address : profile.address;
+      profile.isOrganDonor = isOrganDonor !== undefined ? isOrganDonor : profile.isOrganDonor;
     }
 
     await profile.save();
