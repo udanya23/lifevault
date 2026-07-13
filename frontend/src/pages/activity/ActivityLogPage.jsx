@@ -318,7 +318,11 @@ const ActivityLogPage = () => {
                             </span>
                             <span className="flex items-center gap-1 max-w-xs truncate">
                               <FaMapMarkerAlt className="h-3 w-3 text-slate-350 shrink-0" aria-hidden="true" />
-                              {scan.scannerArea || 'Unknown'}
+                              {scan.scannerArea && scan.scannerArea !== 'Unknown'
+                                ? scan.scannerArea
+                                : scan.scannerCountry && scan.scannerCountry !== 'Unknown'
+                                  ? scan.scannerCountry
+                                  : 'Location unavailable'}
                             </span>
                             <span className="flex items-center gap-1 max-w-xs truncate">
                               <FaDesktop className="h-3 w-3 text-slate-350 shrink-0" aria-hidden="true" />

@@ -27,8 +27,8 @@ const errorHandler = require('./middleware/errorHandler');
 // ── Initialize Express ────────────────────────────────────────────────────────
 const app = express();
 
-// Required behind Render/nginx so secure cookies work with X-Forwarded-Proto
-app.set('trust proxy', 1);
+// Required behind Render/nginx so secure cookies + real client IP work
+app.set('trust proxy', true);
 
 // ── Connect to MongoDB ────────────────────────────────────────────────────────
 connectDB();

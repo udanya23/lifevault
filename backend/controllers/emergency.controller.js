@@ -13,7 +13,7 @@ const MedicalInfo = require('../models/MedicalInfo');
 const QRScan = require('../models/QRScan');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
-const { getIpGeolocation } = require('../utils/ipGeolocation');
+const { getClientIp, getIpGeolocation } = require('../utils/ipGeolocation');
 
 exports.getEmergencyInfo = async (req, res, next) => {
   const { qrToken } = req.params;
@@ -36,11 +36,13 @@ exports.getEmergencyInfo = async (req, res, next) => {
       MedicalInfo.findOne({ userId: user._id }),
     ]);
 
+    // Prefer the real public client IP (not Render's private 10.x hop)
+    const scannerIp = getClientIp(req);
+
     // Log scan asynchronously — don't block the response
-    // Store a human-friendly location derived from IP (city/region).
     QRScan.create({
       userId: user._id,
-      scannerIp: req.ip || 'Unknown',
+      scannerIp,
       scannerCity: 'Unknown',
       scannerRegion: 'Unknown',
       scannerCountry: 'Unknown',
@@ -49,7 +51,7 @@ exports.getEmergencyInfo = async (req, res, next) => {
     })
       .then(async (created) => {
         try {
-          const geo = await getIpGeolocation(req.ip);
+          const geo = await getIpGeolocation(scannerIp);
           if (!geo) return;
 
           created.scannerCity = geo.city || 'Unknown';
