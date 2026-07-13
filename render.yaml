@@ -1,10 +1,19 @@
-# Render Blueprint — optional one-click deploy reference
+# LifeVault — Render Blueprint
+# Dashboard: New → Blueprint → connect this repo
 # Docs: https://render.com/docs/blueprint-spec
+#
+# Deploy order after Blueprint creates services:
+#   1) Fill backend env vars (MongoDB, Cloudinary, Email, JWT)
+#   2) Deploy backend → copy its URL
+#   3) Set frontend VITE_API_URL to https://YOUR-API.onrender.com/api/v1 → redeploy web
+#   4) Set backend CLIENT_URL + FRONTEND_URL to https://YOUR-WEB.onrender.com → redeploy API
 
 services:
+  # ── Backend API ────────────────────────────────────────────────────────────
   - type: web
     name: lifevault-api
     runtime: node
+    plan: free
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
@@ -18,7 +27,14 @@ services:
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      # Exact frontend origin (https://lifevault-web-xxxx.onrender.com) — no trailing slash
       - key: CLIENT_URL
+        sync: false
+      - key: FRONTEND_URL
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
@@ -26,23 +42,35 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      - key: EMAIL_HOST
-        sync: false
-      - key: EMAIL_PORT
-        sync: false
+      # Gmail App Password (or SMTP)
+      - key: EMAIL_SERVICE
+        value: gmail
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASS
         sync: false
+      - key: EMAIL_FROM_NAME
+        value: LifeVault
       - key: EMAIL_FROM_ADDRESS
-        value: noreply@lifevault.app
+        sync: false
 
+  # ── Frontend (Static Site) ─────────────────────────────────────────────────
+  # Do NOT use the Docker nginx image on Render — it proxies to hostname
+  # "backend" which only exists in docker-compose, not on Render.
   - type: web
     name: lifevault-web
-    runtime: docker
+    runtime: static
+    plan: free
     rootDir: frontend
-    dockerfilePath: ./Dockerfile
-    dockerCommand: ""
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
     envVars:
+      # Must be full backend URL, set AFTER backend is live:
+      # https://lifevault-api-xxxx.onrender.com/api/v1
       - key: VITE_API_URL
-        value: /api/v1
+        sync: false
+    routes:
+      # SPA fallback so /dashboard, /emergency/:token, etc. work on refresh
+      - type: rewrite
+        source: /*
+        destination: /index.html

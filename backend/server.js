@@ -61,11 +61,15 @@ app.use(
 const corsOptions = {
   origin: (origin, callback) => {
     const allowedOrigins = [
-      process.env.CLIENT_URL || 'http://localhost:5173',
+      process.env.CLIENT_URL,
+      process.env.FRONTEND_URL,
+      'http://localhost:5173',
       'http://localhost:3000',
-    ];
+    ]
+      .filter(Boolean)
+      .map((url) => url.replace(/\/+$/, '')); // strip trailing slash
 
-    // Allow requests with no origin (mobile apps, Postman, curl)
+    // Allow requests with no origin (mobile apps, Postman, curl, same-origin)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {

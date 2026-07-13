@@ -80,31 +80,17 @@ Update `CLIENT_URL=https://lifevault.app` in backend `.env`.
 
 ## Option 2: Render
 
-### Backend (Web Service)
+**Use the full step-by-step guide:** [RENDER_DEPLOY.md](./RENDER_DEPLOY.md)
 
-1. New → Web Service → connect repo
-2. Root directory: `backend`
-3. Build: `npm install`
-4. Start: `npm start`
-5. Add all environment variables from `.env.example`
-6. Health check path: `/health`
+Summary (avoids common failures):
 
-### Frontend (Static Site or Web Service)
+1. Deploy **backend** as a Node Web Service (`rootDir: backend`, health `/health`)
+2. Deploy **frontend** as a **Static Site** (`rootDir: frontend`, publish `dist`) — not Docker
+3. Set frontend build env: `VITE_API_URL=https://YOUR-API.onrender.com/api/v1`
+4. Add SPA rewrite: `/*` → `/index.html`
+5. Set backend `CLIENT_URL` + `FRONTEND_URL` to your Static Site URL (no trailing slash)
 
-**Option A — Static Site + separate API URL:**
-1. Root: `frontend`
-2. Build: `npm install && npm run build`
-3. Publish: `dist`
-4. Set `VITE_API_URL=https://your-api.onrender.com/api/v1` at build time
-
-**Option B — Docker Web Service (recommended):**
-1. Use `frontend/Dockerfile`
-2. Set backend URL in Render private network or public URL
-3. Nginx in container proxies `/api` to backend service
-
-### MongoDB
-
-Use [MongoDB Atlas](https://www.mongodb.com/atlas) free tier — whitelist Render outbound IPs or use `0.0.0.0/0` with strong DB credentials.
+Do **not** use the frontend Dockerfile on Render — its nginx proxies to hostname `backend`, which only works with docker-compose.
 
 ---
 
