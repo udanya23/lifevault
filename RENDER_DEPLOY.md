@@ -74,7 +74,7 @@ This guide uses the **reliable Render setup**:
 
 | Field | Value |
 |-------|-------|
-| Name | `lifevault-web` |
+| Name | `lifevault-web` (or any name) |
 | Root Directory | `frontend` |
 | Build Command | `npm install && npm run build` |
 | Publish Directory | `dist` |
@@ -83,11 +83,11 @@ This guide uses the **reliable Render setup**:
 
 | Key | Value |
 |-----|--------|
-| `VITE_API_URL` | `https://lifevault-api-XXXX.onrender.com/api/v1` |
+| `VITE_API_URL` | `https://lifevault-backend-4iip.onrender.com/api/v1` |
 
-Use your real backend URL from Step 1. No trailing slash after `v1`.
+No trailing slash after `v1`.
 
-5. After deploy, open **Redirects/Rewrites** (or Routes) and add:
+5. After deploy, open **Redirects/Rewrites** and add:
 
 | Source | Destination | Action |
 |--------|-------------|--------|
@@ -95,7 +95,7 @@ Use your real backend URL from Step 1. No trailing slash after `v1`.
 
 This is required so `/dashboard`, `/emergency/:token`, etc. work on refresh.
 
-6. Copy the frontend URL (example: `https://lifevault-web-xxxx.onrender.com`)
+6. Copy the frontend URL (example: `https://lifevault-xxxx.onrender.com`)
 
 ---
 

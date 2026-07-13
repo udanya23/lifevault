@@ -145,6 +145,21 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Root route — Render / browsers often hit GET/HEAD /
+// Without this, logs show scary "route not found" 404s even when the API is healthy.
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'LifeVault API',
+    health: '/health',
+    apiBase: '/api/v1',
+  });
+});
+
+app.head('/', (req, res) => {
+  res.status(200).end();
+});
+
 // ── API Routes ────────────────────────────────────────────────────────────────
 // All routes are versioned under /api/v1 for future API evolution
 

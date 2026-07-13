@@ -65,10 +65,9 @@ services:
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     envVars:
-      # Must be full backend URL, set AFTER backend is live:
-      # https://lifevault-api-xxxx.onrender.com/api/v1
+      # Public backend API (also in frontend/.env.production)
       - key: VITE_API_URL
-        sync: false
+        value: https://lifevault-backend-4iip.onrender.com/api/v1
     routes:
       # SPA fallback so /dashboard, /emergency/:token, etc. work on refresh
       - type: rewrite
