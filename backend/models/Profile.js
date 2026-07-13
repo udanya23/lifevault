@@ -42,10 +42,6 @@ const profileSchema = new mongoose.Schema(
       pincode: { type: String, trim: true },
       country: { type: String, trim: true },
     },
-    isOrganDonor: {
-      type: Boolean,
-      default: false,
-    },
   },
   {
     timestamps: true,

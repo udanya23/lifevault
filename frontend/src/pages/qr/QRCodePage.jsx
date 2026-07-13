@@ -22,7 +22,6 @@ import {
   FaCheckCircle,
   FaChartLine,
   FaPrint,
-  FaShare,
 } from 'react-icons/fa';
 
 import {
@@ -51,7 +50,6 @@ const QRCodePage = () => {
   const profile = useSelector(selectProfile);
   const qrCanvasRef = useRef(null);
   const [copied, setCopied] = useState(false);
-  const [shared, setShared] = useState(false);
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
   const [showWalletCardModal, setShowWalletCardModal] = useState(false);
 
@@ -69,29 +67,6 @@ const QRCodePage = () => {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error('Failed to copy URL.');
-    }
-  };
-
-  const handleShare = async () => {
-    if (!qrData?.emergencyUrl) return;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${user.name || 'LifeVault'} — Emergency Medical Profile`,
-          text: 'Emergency medical information — scan to view life-saving details.',
-          url: qrData.emergencyUrl,
-        });
-        setShared(true);
-        setTimeout(() => setShared(false), 3000);
-      } catch {
-        // user cancelled share sheet
-      }
-    } else {
-      // Fallback: copy to clipboard
-      await navigator.clipboard.writeText(qrData.emergencyUrl);
-      setShared(true);
-      toast.success('Link copied — share it with family or emergency contacts.');
-      setTimeout(() => setShared(false), 2500);
     }
   };
 
@@ -211,7 +186,7 @@ const QRCodePage = () => {
             </p>
           )}
 
-          <div className="flex gap-2 w-full max-w-xs justify-center flex-wrap">
+          <div className="flex gap-2.5 w-full max-w-xs justify-center">
             <Button
               variant="outline"
               size="sm"
@@ -219,16 +194,7 @@ const QRCodePage = () => {
               onClick={handleCopyUrl}
               className="flex-1"
             >
-              {copied ? 'Copied!' : 'Copy Link'}
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              icon={shared ? FaCheckCircle : FaShare}
-              onClick={handleShare}
-              className="flex-1"
-            >
-              {shared ? 'Shared!' : 'Share'}
+              {copied ? 'Copied' : 'Copy Link'}
             </Button>
             <Button
               variant="secondary"
@@ -285,7 +251,7 @@ const QRCodePage = () => {
               <FaEye className="text-emerald-500" aria-hidden="true" /> Visible on Scan
             </h3>
             <div className="flex flex-wrap gap-1.5 pl-1">
-              {['Name', 'Blood Group', 'Organ Donor Status', 'Emergency Contacts', 'Allergies', 'Chronic Conditions', 'Medications', 'First Aid Notes'].map(
+              {['Name', 'Blood Group', 'Emergency Contacts', 'Allergies', 'Medicines'].map(
                 (field) => (
                   <Badge key={field} variant="success" size="sm">
                     {field}
@@ -302,7 +268,7 @@ const QRCodePage = () => {
               <FaEyeSlash className="text-red-500" aria-hidden="true" /> Never Exposed
             </h3>
             <div className="flex flex-wrap gap-1.5 pl-1">
-              {['Address', 'Email Address', 'Vault Documents', 'Password'].map(
+              {['Address', 'Email Address', 'Vault Documents', 'Medical Notes', 'Password'].map(
                 (field) => (
                   <Badge key={field} variant="danger" size="sm">
                     {field}

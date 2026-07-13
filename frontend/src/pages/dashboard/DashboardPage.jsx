@@ -24,7 +24,6 @@ import StatsCard from '@/components/dashboard/StatsCard';
 import ProfileCompletionCard from '@/components/dashboard/ProfileCompletionCard';
 import QuickActionsCard from '@/components/dashboard/QuickActionsCard';
 import RecentActivityFeed from '@/components/dashboard/RecentActivityFeed';
-import VaultHealthSnapshot from '@/components/dashboard/VaultHealthSnapshot';
 import HealthcareImage from '@/components/common/HealthcareImage';
 import { HEALTHCARE_IMAGES } from '@/utils/imageAssets';
 
@@ -209,14 +208,9 @@ const DashboardPage = () => {
         </div>
       </motion.div>
 
-      {/* ── Activity Feed + Health Snapshot ──────────────────────────────────── */}
-      <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7">
-          <RecentActivityFeed scans={recentScans} logs={recentLogs} />
-        </div>
-        <div className="lg:col-span-5">
-          <VaultHealthSnapshot />
-        </div>
+      {/* ── Activity Feed ─────────────────────────────────────────────────────── */}
+      <motion.div variants={item}>
+        <RecentActivityFeed scans={recentScans} logs={recentLogs} />
       </motion.div>
     </motion.div>
   );
