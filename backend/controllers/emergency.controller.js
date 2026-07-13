@@ -49,8 +49,9 @@ exports.getEmergencyInfo = async (req, res, next) => {
           userId: user._id,
           scannerIp,
           scannerCity: geo?.city || 'Unknown',
-          scannerRegion: geo?.regionName || 'Unknown',
+          scannerRegion: '', // deprecated — city+country now stored in scannerArea
           scannerCountry: geo?.country || 'Unknown',
+          // Format: "City, Country" — e.g. "Hyderabad, India"
           scannerArea: geo?.area || 'Unknown',
           userAgent,
         });

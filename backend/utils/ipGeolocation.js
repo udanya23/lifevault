@@ -3,8 +3,7 @@
  *
  * Behind Render/proxies, req.ip is often a private 10.x address.
  * We extract the first public IP from X-Forwarded-For, then look up
- * city/region via HTTPS providers (ip-api free tier is HTTP-only and
- * often blocked on Render).
+ * city/region via HTTPS providers.
  */
 
 const GEO_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
@@ -37,7 +36,6 @@ const isPrivateOrLocalIp = (ip) => {
  */
 const getClientIp = (req) => {
   const candidates = [];
-
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string' && forwarded.length) {
     forwarded.split(',').forEach((part) => candidates.push(part.trim()));
@@ -52,68 +50,75 @@ const getClientIp = (req) => {
 
   const normalized = candidates.map(normalizeIp).filter(Boolean);
   const publicIp = normalized.find((ip) => !isPrivateOrLocalIp(ip));
-  if (publicIp) return publicIp;
-  return normalized[0] || 'Unknown';
+  return publicIp || normalized[0] || 'Unknown';
 };
 
-const buildArea = ({ city, regionName, country }) => {
-  const parts = [];
-  if (city) parts.push(city);
-  if (regionName) parts.push(regionName);
-  if (country) parts.push(country);
-  return parts.join(', ');
+const buildArea = ({ city, country }) => {
+  return [city, country].filter(Boolean).join(', ');
 };
 
 const fetchJson = async (url, timeoutMs = 4000) => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const resp = await fetch(url, {
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    });
+    const resp = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
     if (!resp.ok) return null;
     return await resp.json();
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
+  } catch { return null; } finally { clearTimeout(timeout); }
 };
 
-/** Provider 1: ipwho.is (HTTPS, free, no key) */
+/**
+ * ISO 3166-1 alpha-2 -> full country name (common countries).
+ * Used when a provider returns only a 2-letter code.
+ */
+const ISO_COUNTRY_NAMES = {
+  IN: 'India', US: 'United States', GB: 'United Kingdom', AU: 'Australia',
+  CA: 'Canada', DE: 'Germany', FR: 'France', JP: 'Japan', CN: 'China',
+  BR: 'Brazil', SG: 'Singapore', AE: 'United Arab Emirates', PK: 'Pakistan',
+  BD: 'Bangladesh', NP: 'Nepal', LK: 'Sri Lanka', MY: 'Malaysia',
+  ID: 'Indonesia', TH: 'Thailand', PH: 'Philippines', NZ: 'New Zealand',
+  ZA: 'South Africa', NG: 'Nigeria', KE: 'Kenya', EG: 'Egypt',
+  RU: 'Russia', MX: 'Mexico', AR: 'Argentina', IT: 'Italy', ES: 'Spain',
+  NL: 'Netherlands', SE: 'Sweden', NO: 'Norway', FI: 'Finland', CH: 'Switzerland',
+  SA: 'Saudi Arabia', IR: 'Iran', IQ: 'Iraq', TR: 'Turkey', UA: 'Ukraine',
+  PL: 'Poland', CZ: 'Czech Republic', HU: 'Hungary', RO: 'Romania', GR: 'Greece',
+  PT: 'Portugal', DK: 'Denmark', BE: 'Belgium', AT: 'Austria', HK: 'Hong Kong',
+  TW: 'Taiwan', KR: 'South Korea', VN: 'Vietnam',
+};
+
+const resolveCountry = (code) => {
+  if (!code) return '';
+  if (code.length > 2) return code; // already a full name
+  return ISO_COUNTRY_NAMES[code.toUpperCase()] || code;
+};
+
+/**
+ * Provider 1: ipinfo.io — Most accurate for Indian ISP IPs
+ * Returns city (accurate) and country code (resolved to full name).
+ */
+const lookupIpInfo = async (ip) => {
+  const token = process.env.IPINFO_TOKEN ? `?token=${process.env.IPINFO_TOKEN}` : '';
+  const data = await fetchJson(`https://ipinfo.io/${encodeURIComponent(ip)}/json${token}`);
+  if (!data || data.bogon || !data.city) return null;
+  return { city: data.city, country: resolveCountry(data.country) };
+};
+
+const lookupFreeIpApi = async (ip) => {
+  const data = await fetchJson(`https://freeipapi.com/api/json/${encodeURIComponent(ip)}`);
+  if (!data || !data.cityName) return null;
+  return { city: data.cityName, country: data.countryName };
+};
+
+const lookupIpApiCom = async (ip) => {
+  const data = await fetchJson(`http://ip-api.com/json/${encodeURIComponent(ip)}`);
+  if (!data || data.status !== 'success') return null;
+  return { city: data.city, country: data.country };
+};
+
 const lookupIpWhoIs = async (ip) => {
   const data = await fetchJson(`https://ipwho.is/${encodeURIComponent(ip)}`);
-  if (!data || data.success === false) return null;
-  return {
-    city: data.city || '',
-    regionName: data.region || data.region_code || '',
-    country: data.country || '',
-  };
-};
-
-/** Provider 2: geojs.io (HTTPS, free, no key) */
-const lookupGeoJs = async (ip) => {
-  const data = await fetchJson(
-    `https://get.geojs.io/v1/ip/geo/${encodeURIComponent(ip)}.json`
-  );
-  if (!data || data.error) return null;
-  return {
-    city: data.city || '',
-    regionName: data.region || '',
-    country: data.country || '',
-  };
-};
-
-/** Provider 3: ipapi.co (HTTPS, free with rate limits) */
-const lookupIpApiCo = async (ip) => {
-  const data = await fetchJson(`https://ipapi.co/${encodeURIComponent(ip)}/json/`);
-  if (!data || data.error) return null;
-  return {
-    city: data.city || '',
-    regionName: data.region || '',
-    country: data.country_name || data.country || '',
-  };
+  if (!data || !data.success) return null;
+  return { city: data.city, country: data.country };
 };
 
 const getIpGeolocation = async (rawIp) => {
@@ -124,28 +129,21 @@ const getIpGeolocation = async (rawIp) => {
   const cached = cache.get(ip);
   if (cached && cached.expiresAt > now) return cached.value;
 
-  const providers = [lookupIpWhoIs, lookupGeoJs, lookupIpApiCo];
+  const providers = [lookupIpInfo, lookupFreeIpApi, lookupIpApiCom, lookupIpWhoIs];
   let geo = null;
 
   for (const provider of providers) {
-    try {
-      geo = await provider(ip);
-      if (geo && (geo.city || geo.regionName || geo.country)) break;
-    } catch {
-      // try next provider
-    }
+    geo = await provider(ip);
+    if (geo?.city) break;
   }
 
   if (!geo) return null;
 
   const value = {
     city: geo.city || '',
-    regionName: geo.regionName || '',
     country: geo.country || '',
     area: buildArea(geo) || '',
   };
-
-  if (!value.area) return null;
 
   cache.set(ip, { value, expiresAt: now + GEO_CACHE_MAX_AGE_MS });
   return value;
