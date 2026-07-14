@@ -262,7 +262,6 @@ const EmergencyPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
-  const [location, setLocation] = useState(null); // visitor's city, country
 
   // ── Lock the entire page to light mode ──────────────────────────────────────
   useEffect(() => {
@@ -286,25 +285,6 @@ const EmergencyPage = () => {
       document.body.style.backgroundColor = '';
       document.body.style.color = '';
     };
-  }, []);
-
-  // ── Fetch visitor's geolocation (IP-based) ──────────────────────────────────
-  useEffect(() => {
-    const fetchLocation = async () => {
-      try {
-        const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(4000) });
-        if (!res.ok) return;
-        const geo = await res.json();
-        if (geo?.city && geo?.country_name) {
-          setLocation(`${geo.city}, ${geo.country_name}`);
-        } else if (geo?.country_name) {
-          setLocation(geo.country_name);
-        }
-      } catch {
-        // silently ignore — location is non-critical
-      }
-    };
-    fetchLocation();
   }, []);
 
   // ── Fetch emergency profile ──────────────────────────────────────────────────
@@ -400,11 +380,11 @@ const EmergencyPage = () => {
             </span>
           )}
 
-          {/* Visitor Location Badge */}
-          {location && (
+          {/* Scanner Location — server-detected, matches activity log exactly */}
+          {data.scannerLocation && (
             <span style={S.locationBadge}>
               <FaMapMarkerAlt style={{ fontSize: '11px' }} aria-hidden="true" />
-              Scanned from: {location}
+              Scanned from: {data.scannerLocation}
             </span>
           )}
         </div>

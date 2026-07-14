@@ -40,25 +40,30 @@ exports.getEmergencyInfo = async (req, res, next) => {
     const scannerIp = getClientIp(req);
     const userAgent = req.headers['user-agent'] || 'Unknown';
 
-    // Resolve location first (HTTPS providers), then save one complete scan record.
-    // Keep this off the request critical path so the emergency page still loads fast.
-    (async () => {
-      try {
-        const geo = await getIpGeolocation(scannerIp);
-        await QRScan.create({
-          userId: user._id,
-          scannerIp,
-          scannerCity: geo?.city || 'Unknown',
-          scannerRegion: '', // deprecated — city+country now stored in scannerArea
-          scannerCountry: geo?.country || 'Unknown',
-          // Format: "City, Country" — e.g. "Hyderabad, India"
-          scannerArea: geo?.area || 'Unknown',
-          userAgent,
-        });
-      } catch (err) {
-        console.error('QR scan log failed:', err.message);
-      }
-    })();
+    // Resolve geolocation with a max 3-second timeout.
+    // We await this BEFORE sending the response so we can include the
+    // detected location in the API data — this guarantees the emergency page
+    // shows the EXACT same location as the activity log (both use the same IP).
+    let geo = null;
+    try {
+      geo = await Promise.race([
+        getIpGeolocation(scannerIp),
+        new Promise((resolve) => setTimeout(() => resolve(null), 3000)),
+      ]);
+    } catch {
+      // non-critical — page still loads without location
+    }
+
+    // Save the scan log in the background (fire-and-forget) — does not block response.
+    QRScan.create({
+      userId: user._id,
+      scannerIp,
+      scannerCity: geo?.city || 'Unknown',
+      scannerRegion: '',
+      scannerCountry: geo?.country || 'Unknown',
+      scannerArea: geo?.area || 'Unknown',
+      userAgent,
+    }).catch((err) => console.error('QR scan log failed:', err.message));
 
     // Strict field whitelist — only life-saving data
     const emergencyData = {
@@ -76,6 +81,9 @@ exports.getEmergencyInfo = async (req, res, next) => {
       currentMedicines: medicalInfo?.currentMedicines?.length
         ? medicalInfo.currentMedicines
         : [],
+      // Server-detected location of the person who scanned the QR code.
+      // Uses the same IP detection logic as the activity log — always consistent.
+      scannerLocation: geo?.area || null,
     };
 
     new ApiResponse(200, 'Emergency information retrieved', emergencyData).send(res);
