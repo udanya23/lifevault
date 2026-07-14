@@ -262,6 +262,7 @@ const EmergencyPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+  const [displayLocation, setDisplayLocation] = useState(null);
 
   // ── Lock the entire page to light mode ──────────────────────────────────────
   useEffect(() => {
@@ -285,6 +286,48 @@ const EmergencyPage = () => {
       document.body.style.backgroundColor = '';
       document.body.style.color = '';
     };
+  }, []);
+
+  // ── GPS Location (most accurate — actual physical city, not ISP hub city) ────
+  // Root cause of "always shows Nellore": all phones on your network share the same
+  // public IP (223.185.49.74) which your ISP registered to Nellore.
+  // IP geolocation will ALWAYS return Nellore for that IP regardless of device.
+  // Browser GPS gives the real physical location of whoever is holding the phone.
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const { latitude, longitude } = coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            { headers: { 'User-Agent': 'LifeVault-Emergency/1.0' } }
+          );
+          if (!res.ok) return;
+          const geo = await res.json();
+          const addr = geo?.address || {};
+          // Nominatim returns varying levels of detail — pick the most specific available
+          const city =
+            addr.city ||
+            addr.town ||
+            addr.village ||
+            addr.suburb ||
+            addr.county ||
+            addr.state_district;
+          const country = addr.country;
+          if (city && country) setDisplayLocation(`${city}, ${country}`);
+          else if (city) setDisplayLocation(city);
+          else if (country) setDisplayLocation(country);
+        } catch {
+          // GPS worked but reverse-geocoding failed — fall through to IP fallback
+        }
+      },
+      () => {
+        // GPS denied or unavailable — displayLocation will remain null and
+        // the badge will show data.scannerLocation (IP-based) as fallback below
+      },
+      { timeout: 8000, maximumAge: 120000 }
+    );
   }, []);
 
   // ── Fetch emergency profile ──────────────────────────────────────────────────
@@ -380,11 +423,11 @@ const EmergencyPage = () => {
             </span>
           )}
 
-          {/* Scanner Location — server-detected, matches activity log exactly */}
-          {data.scannerLocation && (
+          {/* Location Badge: GPS city (accurate) → IP city (ISP fallback) */}
+          {(displayLocation || data.scannerLocation) && (
             <span style={S.locationBadge}>
               <FaMapMarkerAlt style={{ fontSize: '11px' }} aria-hidden="true" />
-              Scanned from: {data.scannerLocation}
+              Scanned from: {displayLocation || data.scannerLocation}
             </span>
           )}
         </div>
