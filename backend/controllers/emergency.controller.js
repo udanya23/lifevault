@@ -124,18 +124,14 @@ exports.updateScanLocation = async (req, res, next) => {
 
     const resolvedArea = area || [city, country].filter(Boolean).join(', ');
 
-    // Update only the most recent scan for this user
-    await QRScan.findOneAndUpdate(
-      { userId: user._id },
-      {
-        $set: {
-          scannerCity:    city    || '',
-          scannerCountry: country || '',
-          scannerArea:    resolvedArea,
-        },
-      },
-      { sort: { scannedAt: -1 } }
-    );
+    // Update only the most recent scan for this user using standard, highly compatible findOne + save
+    const scan = await QRScan.findOne({ userId: user._id }).sort({ scannedAt: -1 });
+    if (scan) {
+      scan.scannerCity = city || '';
+      scan.scannerCountry = country || '';
+      scan.scannerArea = resolvedArea;
+      await scan.save();
+    }
 
     return res.status(200).json({ success: true, message: 'Location updated.' });
   } catch (error) {
