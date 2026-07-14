@@ -98,3 +98,47 @@ exports.getEmergencyInfo = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * PATCH /emergency/:qrToken/location
+ *
+ * Called by the emergency page AFTER browser GPS resolves.
+ * Updates the most recent QRScan for this user with the accurate GPS city
+ * so the activity log shows the real physical location instead of the
+ * ISP hub city (e.g. "Nellore" for all devices on the same WiFi).
+ *
+ * No authentication required — tied to the public qrToken.
+ * Only updates location fields, nothing else.
+ */
+exports.updateScanLocation = async (req, res, next) => {
+  const { qrToken } = req.params;
+  const { city, country, area } = req.body || {};
+
+  if (!city && !area) {
+    return res.status(400).json({ success: false, message: 'Location data required.' });
+  }
+
+  try {
+    const user = await User.findOne({ qrToken, isActive: true, isSuspended: false });
+    if (!user) return res.status(404).json({ success: false, message: 'Not found.' });
+
+    const resolvedArea = area || [city, country].filter(Boolean).join(', ');
+
+    // Update only the most recent scan for this user
+    await QRScan.findOneAndUpdate(
+      { userId: user._id },
+      {
+        $set: {
+          scannerCity:    city    || '',
+          scannerCountry: country || '',
+          scannerArea:    resolvedArea,
+        },
+      },
+      { sort: { scannedAt: -1 } }
+    );
+
+    return res.status(200).json({ success: true, message: 'Location updated.' });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -22,4 +22,7 @@ const emergencyLimiter = rateLimit({
 
 router.get('/:qrToken', emergencyLimiter, emergencyController.getEmergencyInfo);
 
+// Called by the emergency page after browser GPS resolves — updates activity log location
+router.patch('/:qrToken/location', emergencyLimiter, emergencyController.updateScanLocation);
+
 module.exports = router;

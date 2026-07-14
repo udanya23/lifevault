@@ -406,6 +406,8 @@ const EmergencyPage = () => {
   }, []);
 
   // ── Browser GPS → OpenStreetMap reverse geocode ───────────────────────────
+  // After GPS resolves, we ALSO patch the backend scan record so the
+  // activity log shows the real physical city, not the ISP hub city (Nellore).
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -421,15 +423,26 @@ const EmergencyPage = () => {
           const addr = geo?.address || {};
           const city = addr.city || addr.town || addr.village || addr.suburb || addr.county || addr.state_district;
           const country = addr.country;
-          if (city && country) setDisplayLocation(`${city}, ${country}`);
-          else if (city) setDisplayLocation(city);
-          else if (country) setDisplayLocation(country);
+
+          if (city || country) {
+            const area = [city, country].filter(Boolean).join(', ');
+            setDisplayLocation(area || country || city);
+
+            // ── Sync GPS location back to backend activity log ────────────
+            // This updates the scan record so the owner sees the real city
+            // in their activity feed, not the ISP-registered city.
+            try {
+              await emergencyAPI.updateScanLocation(qrToken, { city, country, area });
+            } catch {
+              // Non-critical — page still works; activity log keeps IP city
+            }
+          }
         } catch { /* ignore */ }
       },
-      () => { /* GPS denied — will fall back to data.scannerLocation */ },
+      () => { /* GPS denied — falls back to data.scannerLocation */ },
       { timeout: 8000, maximumAge: 120000 }
     );
-  }, []);
+  }, [qrToken]);
 
   // ── Fetch emergency profile ───────────────────────────────────────────────
   useEffect(() => {
