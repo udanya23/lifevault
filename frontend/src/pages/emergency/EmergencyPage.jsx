@@ -1,10 +1,17 @@
 /**
  * pages/emergency/EmergencyPage.jsx — Public Emergency Profile
  *
- * Premium:
- * - Floating high-end emergency banner with live animated pulse dot
- * - Grid card components for allergies, medications, and next-of-kin contacts
- * - Highlighted direct action contact dialer buttons with green gradients
+ * IMPORTANT: This page uses ONLY inline styles — zero Tailwind dark: classes.
+ * This is intentional: emergency pages must display correctly on ANY phone,
+ * regardless of system dark mode, Samsung browser night mode, eye-care filters,
+ * or any OS-level color scheme preference.
+ *
+ * Features:
+ * - Force light mode at the <html> level via useEffect
+ * - All backgrounds/colors hardcoded via inline styles (cannot be overridden)
+ * - Live IP geolocation: shows visitor city + country via ipapi.co
+ * - Premium animated red emergency header
+ * - Responsive medical cards: allergies, medications, emergency contacts
  */
 
 import { useEffect, useState } from 'react';
@@ -18,39 +25,293 @@ import {
   FaTint,
   FaExclamationTriangle,
   FaSpinner,
+  FaMapMarkerAlt,
 } from 'react-icons/fa';
 
 import { emergencyAPI } from '@/api/emergencyAPI';
-import { getBloodGroupColor } from '@/utils/helpers';
-import Badge from '@/components/common/Badge';
-import Card from '@/components/common/Card';
-import Button from '@/components/common/Button';
+
+// ── Inline style constants — override everything ──────────────────────────────
+const S = {
+  page: {
+    minHeight: '100vh',
+    backgroundColor: '#f8fafc',
+    color: '#0f172a',
+    fontFamily: "'Inter', 'Segoe UI', sans-serif",
+  },
+  header: {
+    backgroundColor: '#dc2626',
+    color: '#ffffff',
+    padding: '12px 16px',
+    textAlign: 'center',
+    position: 'sticky',
+    top: 0,
+    zIndex: 50,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '10px',
+    boxShadow: '0 2px 8px rgba(220,38,38,0.4)',
+  },
+  headerText: {
+    fontSize: '11px',
+    fontWeight: 800,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+  },
+  pulseDot: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    backgroundColor: '#ffffff',
+    flexShrink: 0,
+  },
+  container: {
+    maxWidth: '440px',
+    margin: '0 auto',
+    padding: '28px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: '16px',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05)',
+    padding: '20px',
+  },
+  identityCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: '16px',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07)',
+    padding: '24px 20px',
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  heartIcon: {
+    width: '48px',
+    height: '48px',
+    borderRadius: '50%',
+    backgroundColor: '#fef2f2',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#ef4444',
+    marginBottom: '12px',
+    boxShadow: '0 2px 12px rgba(239,68,68,0.2)',
+  },
+  patientName: {
+    fontSize: '22px',
+    fontWeight: 800,
+    color: '#0f172a',
+    margin: 0,
+  },
+  bloodBadge: (bg, color) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '4px 14px',
+    borderRadius: '99px',
+    fontSize: '12px',
+    fontWeight: 800,
+    marginTop: '12px',
+    backgroundColor: bg,
+    color: color,
+    border: `1px solid ${color}33`,
+  }),
+  locationBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '4px 12px',
+    borderRadius: '99px',
+    fontSize: '11px',
+    fontWeight: 600,
+    marginTop: '8px',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+    border: '1px solid #bfdbfe',
+  },
+  sectionAccentCard: (accentColor) => ({
+    backgroundColor: '#ffffff',
+    borderRadius: '16px',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+    padding: '18px 18px 18px 22px',
+    position: 'relative',
+    overflow: 'hidden',
+  }),
+  accentBar: (color) => ({
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: '4px',
+    backgroundColor: color,
+    borderRadius: '16px 0 0 16px',
+  }),
+  sectionTitle: (color) => ({
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '11px',
+    fontWeight: 800,
+    color: color,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    marginBottom: '12px',
+  }),
+  allergyBadge: {
+    display: 'inline-block',
+    padding: '4px 10px',
+    borderRadius: '99px',
+    fontSize: '12px',
+    fontWeight: 700,
+    backgroundColor: '#fef2f2',
+    color: '#dc2626',
+    border: '1px solid #fecaca',
+    margin: '3px',
+  },
+  medItem: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#334155',
+    padding: '6px 0 6px 12px',
+    borderLeft: '2px solid #93c5fd',
+    marginBottom: '6px',
+  },
+  contactRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '12px',
+    borderRadius: '12px',
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    marginBottom: '8px',
+  },
+  contactName: {
+    fontSize: '13px',
+    fontWeight: 700,
+    color: '#0f172a',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    flexWrap: 'wrap',
+  },
+  contactRel: {
+    fontSize: '11px',
+    color: '#94a3b8',
+    fontWeight: 600,
+    marginTop: '2px',
+  },
+  primaryBadge: {
+    fontSize: '9px',
+    fontWeight: 800,
+    padding: '2px 7px',
+    borderRadius: '99px',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+    border: '1px solid #bfdbfe',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  callBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 14px',
+    borderRadius: '10px',
+    backgroundColor: '#16a34a',
+    color: '#ffffff',
+    fontWeight: 700,
+    fontSize: '12px',
+    textDecoration: 'none',
+    flexShrink: 0,
+    boxShadow: '0 2px 8px rgba(22,163,74,0.3)',
+  },
+  footer: {
+    textAlign: 'center',
+    fontSize: '10px',
+    color: '#94a3b8',
+    fontWeight: 600,
+    paddingTop: '8px',
+    paddingBottom: '16px',
+  },
+};
+
+// Blood group colors (inline, not Tailwind classes)
+const BLOOD_COLORS = {
+  'A+':  { bg: '#fef2f2', fg: '#b91c1c' },
+  'A-':  { bg: '#fff7ed', fg: '#c2410c' },
+  'B+':  { bg: '#fff7ed', fg: '#c2410c' },
+  'B-':  { bg: '#fef9c3', fg: '#a16207' },
+  'AB+': { bg: '#f3e8ff', fg: '#7c3aed' },
+  'AB-': { bg: '#ede9fe', fg: '#6d28d9' },
+  'O+':  { bg: '#f0fdf4', fg: '#15803d' },
+  'O-':  { bg: '#ecfdf5', fg: '#065f46' },
+};
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 const EmergencyPage = () => {
   const { qrToken } = useParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+  const [location, setLocation] = useState(null); // visitor's city, country
 
-  // Force light mode on the emergency page — prevents yellow/discolored
-  // backgrounds caused by Android eye-care filters, Samsung browser dark mode,
-  // or system-level color scheme preferences on the viewer's device.
+  // ── Lock the entire page to light mode ──────────────────────────────────────
+  // This runs before any render and cannot be overridden by Tailwind dark classes,
+  // Samsung browser night mode, Android eye-care filters, or OS color-scheme prefs.
   useEffect(() => {
     const html = document.documentElement;
     const prevColorScheme = html.style.colorScheme;
+    const prevBg = html.style.backgroundColor;
     const hadDark = html.classList.contains('dark');
 
+    // Immediately force light
     html.classList.remove('dark');
     html.style.colorScheme = 'light';
     html.style.backgroundColor = '#ffffff';
+    html.style.color = '#0f172a';
+    document.body.style.backgroundColor = '#f8fafc';
+    document.body.style.color = '#0f172a';
 
     return () => {
+      // Restore when navigating back to the main app
       if (hadDark) html.classList.add('dark');
       html.style.colorScheme = prevColorScheme;
-      html.style.backgroundColor = '';
+      html.style.backgroundColor = prevBg;
+      html.style.color = '';
+      document.body.style.backgroundColor = '';
+      document.body.style.color = '';
     };
   }, []);
 
+  // ── Fetch visitor's geolocation (IP-based) ──────────────────────────────────
+  useEffect(() => {
+    const fetchLocation = async () => {
+      try {
+        const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(4000) });
+        if (!res.ok) return;
+        const geo = await res.json();
+        if (geo?.city && geo?.country_name) {
+          setLocation(`${geo.city}, ${geo.country_name}`);
+        } else if (geo?.country_name) {
+          setLocation(geo.country_name);
+        }
+      } catch {
+        // silently ignore — location is non-critical
+      }
+    };
+    fetchLocation();
+  }, []);
+
+  // ── Fetch emergency profile ──────────────────────────────────────────────────
   useEffect(() => {
     const fetchEmergency = async () => {
       try {
@@ -68,168 +329,157 @@ const EmergencyPage = () => {
         setLoading(false);
       }
     };
-
     if (qrToken) fetchEmergency();
   }, [qrToken]);
 
+  // ── Loading State ────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: '#ffffff', color: '#334155' }}
-      >
-        <div className="text-center space-y-3">
-          <FaSpinner className="h-9 w-9 text-blue-600 animate-spin mx-auto" aria-hidden="true" />
-          <p className="text-sm font-semibold text-slate-500">Retrieving emergency profile…</p>
+      <div style={{ ...S.page, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <FaSpinner
+            style={{ fontSize: '36px', color: '#2563eb', animation: 'spin 1s linear infinite', display: 'block', margin: '0 auto 12px' }}
+            aria-hidden="true"
+          />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <p style={{ fontSize: '14px', fontWeight: 600, color: '#64748b', margin: 0 }}>
+            Retrieving emergency profile…
+          </p>
         </div>
       </div>
     );
   }
 
+  // ── Error State ──────────────────────────────────────────────────────────────
   if (error || !data) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center p-4"
-        style={{ backgroundColor: '#ffffff', color: '#334155' }}
-      >
-        <div className="text-center max-w-sm space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center text-red-500 mx-auto">
-            <FaExclamationTriangle className="h-8 w-8 animate-bounce" aria-hidden="true" />
+      <div style={{ ...S.page, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+        <div style={{ textAlign: 'center', maxWidth: '320px' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <FaExclamationTriangle style={{ fontSize: '28px', color: '#ef4444' }} aria-hidden="true" />
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">
-              Profile Not Available
-            </h1>
-            <p className="text-xs text-slate-500 mt-1">{error}</p>
-          </div>
+          <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>
+            Profile Not Available
+          </h1>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>{error}</p>
         </div>
       </div>
     );
   }
 
+  const bloodColor = BLOOD_COLORS[data.bloodGroup] || { bg: '#f1f5f9', fg: '#475569' };
+
+  // ── Main Render ──────────────────────────────────────────────────────────────
   return (
-    <div
-      className="min-h-screen"
-      style={{ backgroundColor: '#f8fafc', color: '#0f172a' }}
-    >
-      {/* Emergency Header Banner — always red, never affected by dark/night mode */}
-      <div
-        className="text-white py-3 px-4 text-center sticky top-0 z-50 flex items-center justify-center gap-2 shadow-md"
-        style={{ backgroundColor: '#dc2626' }}
+    <div style={S.page}>
+
+      {/* ── Sticky Emergency Banner ── */}
+      <div style={S.header} role="banner">
+        <span style={{ ...S.pulseDot, animation: 'pulse 1.5s ease-in-out infinite' }} aria-hidden="true" />
+        <style>{`
+          @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.85)} }
+          @keyframes spin  { to { transform: rotate(360deg); } }
+        `}</style>
+        <span style={S.headerText}>🚨 Emergency Medical Profile</span>
+      </div>
+
+      <motion.div
+        style={S.container}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
       >
-        <span className="w-2 h-2 rounded-full bg-white animate-pulse" aria-hidden="true" />
-        <span className="text-xs font-extrabold tracking-widest uppercase">
-          Emergency Medical Profile
-        </span>
-      </div>
 
-      <div className="max-w-md mx-auto px-4 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="space-y-5 text-left"
-        >
-          {/* Patient Identity */}
-          <Card variant="default" className="text-center flex flex-col items-center p-6 border-slate-205 dark:border-slate-800">
-            <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center text-red-500 mb-3 shadow-[0_2px_10px_rgba(239,68,68,0.2)]">
-              <FaHeartbeat className="h-6 w-6" aria-hidden="true" />
+        {/* ── Patient Identity Card ── */}
+        <div style={S.identityCard}>
+          <div style={S.heartIcon}>
+            <FaHeartbeat style={{ fontSize: '22px' }} aria-hidden="true" />
+          </div>
+          <h1 style={S.patientName}>{data.name}</h1>
+
+          {data.bloodGroup && (
+            <span style={S.bloodBadge(bloodColor.bg, bloodColor.fg)}>
+              <FaTint style={{ fontSize: '12px' }} aria-hidden="true" />
+              Blood Group: {data.bloodGroup}
+            </span>
+          )}
+
+          {/* Visitor Location Badge */}
+          {location && (
+            <span style={S.locationBadge}>
+              <FaMapMarkerAlt style={{ fontSize: '11px' }} aria-hidden="true" />
+              Scanned from: {location}
+            </span>
+          )}
+        </div>
+
+        {/* ── Allergies ── */}
+        {data.allergies?.length > 0 && (
+          <div style={S.sectionAccentCard('#ef4444')}>
+            <div style={S.accentBar('#ef4444')} aria-hidden="true" />
+            <div style={S.sectionTitle('#b91c1c')}>
+              <FaAllergies aria-hidden="true" />
+              Known Allergies
             </div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-              {data.name}
-            </h1>
-            {data.bloodGroup && (
-              <div className="mt-3">
-                <span
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border ${getBloodGroupColor(data.bloodGroup)}`}
-                >
-                  <FaTint className="h-3.5 w-3.5" aria-hidden="true" />
-                  Blood Group: {data.bloodGroup}
-                </span>
-              </div>
-            )}
-          </Card>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {data.allergies.map((allergy, i) => (
+                <span key={i} style={S.allergyBadge}>{allergy}</span>
+              ))}
+            </div>
+          </div>
+        )}
 
-          {/* Allergies — Critical */}
-          {data.allergies?.length > 0 && (
-            <Card variant="default" className="border-red-200 dark:border-red-900/60 bg-red-50/10 dark:bg-red-950/5 relative overflow-hidden">
-              <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-red-500" aria-hidden="true" />
-              <h2 className="text-xs font-bold text-red-750 dark:text-red-400 flex items-center gap-2 mb-3 select-none pl-1">
-                <FaAllergies aria-hidden="true" /> Known Allergies
-              </h2>
-              <div className="flex flex-wrap gap-1.5 pl-1">
-                {data.allergies.map((allergy, i) => (
-                  <Badge key={i} variant="danger" size="sm">
-                    {allergy}
-                  </Badge>
-                ))}
-              </div>
-            </Card>
-          )}
+        {/* ── Current Medications ── */}
+        {data.currentMedicines?.length > 0 && (
+          <div style={S.sectionAccentCard('#3b82f6')}>
+            <div style={S.accentBar('#3b82f6')} aria-hidden="true" />
+            <div style={S.sectionTitle('#1d4ed8')}>
+              <FaPills aria-hidden="true" />
+              Current Medications
+            </div>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {data.currentMedicines.map((med, i) => (
+                <li key={i} style={S.medItem}>{med}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-          {/* Current Medicines */}
-          {data.currentMedicines?.length > 0 && (
-            <Card variant="default" className="border-slate-205 dark:border-slate-800 relative overflow-hidden">
-              <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-blue-500" aria-hidden="true" />
-              <h2 className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-3 select-none pl-1">
-                <FaPills className="text-blue-500" aria-hidden="true" /> Current Medications
-              </h2>
-              <ul className="space-y-2 pl-1">
-                {data.currentMedicines.map((med, i) => (
-                  <li
-                    key={i}
-                    className="text-xs font-semibold text-slate-700 dark:text-slate-300 pl-3 border-l-2 border-blue-400"
-                  >
-                    {med}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
-
-          {/* Emergency Contacts */}
-          {data.emergencyContacts?.length > 0 && (
-            <Card variant="default" className="border-slate-205 dark:border-slate-800 relative overflow-hidden">
-              <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-emerald-500" aria-hidden="true" />
-              <h2 className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-4 select-none pl-1">
-                <FaPhone className="text-emerald-500" aria-hidden="true" /> Next-of-Kin Contacts
-              </h2>
-              <div className="space-y-2.5 pl-1">
-                {data.emergencyContacts.map((contact, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/60"
-                  >
-                    <div>
-                      <p className="text-xs font-bold text-slate-850 dark:text-white flex items-center gap-1.5 flex-wrap">
-                        {contact.name}
-                        {contact.isPrimary && (
-                          <Badge variant="primary" size="sm" className="font-extrabold uppercase text-[8px]">
-                            Primary
-                          </Badge>
-                        )}
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-0.5 font-semibold">{contact.relationship}</p>
-                    </div>
-                    <a
-                      href={`tel:${contact.phone}`}
-                    >
-                      <Button variant="success" size="xs" icon={FaPhone}>
-                        Call
-                      </Button>
-                    </a>
+        {/* ── Emergency Contacts ── */}
+        {data.emergencyContacts?.length > 0 && (
+          <div style={S.sectionAccentCard('#10b981')}>
+            <div style={S.accentBar('#10b981')} aria-hidden="true" />
+            <div style={S.sectionTitle('#065f46')}>
+              <FaPhone aria-hidden="true" />
+              Next-of-Kin Contacts
+            </div>
+            {data.emergencyContacts.map((contact, i) => (
+              <div key={i} style={S.contactRow}>
+                <div>
+                  <div style={S.contactName}>
+                    {contact.name}
+                    {contact.isPrimary && (
+                      <span style={S.primaryBadge}>Primary</span>
+                    )}
                   </div>
-                ))}
+                  <div style={S.contactRel}>{contact.relationship}</div>
+                </div>
+                <a href={`tel:${contact.phone}`} style={S.callBtn} aria-label={`Call ${contact.name}`}>
+                  <FaPhone style={{ fontSize: '11px' }} aria-hidden="true" />
+                  Call
+                </a>
               </div>
-            </Card>
-          )}
+            ))}
+          </div>
+        )}
 
-          {/* Footer */}
-          <p className="text-center text-[10px] text-slate-400 dark:text-slate-500 pt-4 font-semibold">
-            Powered by LifeVault — Zero-Knowledge Emergency Access. Private documents remain locked.
-          </p>
-        </motion.div>
-      </div>
+        {/* ── Footer ── */}
+        <p style={S.footer}>
+          Powered by LifeVault — Zero-Knowledge Emergency Access.<br />
+          Private documents remain locked.
+        </p>
+
+      </motion.div>
     </div>
   );
 };
