@@ -64,7 +64,7 @@ const ScoreRing = ({ score, color }) => {
         </linearGradient>
       </defs>
       {/* Track */}
-      <circle cx="70" cy="70" r={R} fill="none" stroke="#f1f5f9" strokeWidth="12" />
+      <circle cx="70" cy="70" r={R} fill="none" stroke="currentColor" className="text-slate-100 dark:text-slate-700/50" strokeWidth="12" />
       {/* Progress */}
       <motion.circle
         cx="70" cy="70" r={R}
@@ -84,10 +84,40 @@ const ScoreRing = ({ score, color }) => {
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const getStatus = (score) => {
-  if (score >= 90) return { label: 'Excellent',    color: '#16a34a', bg: '#f0fdf4', textClass: 'text-emerald-600' };
-  if (score >= 70) return { label: 'Good',         color: '#2563eb', bg: '#eff6ff', textClass: 'text-blue-600' };
-  if (score >= 50) return { label: 'Needs Work',   color: '#d97706', bg: '#fffbeb', textClass: 'text-amber-600' };
-  return               { label: 'Incomplete',   color: '#dc2626', bg: '#fef2f2', textClass: 'text-red-600' };
+  if (score >= 90) {
+    return {
+      label: 'Excellent',
+      color: '#10b981', // emerald-500
+      badgeClasses: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-500/20',
+      ctaClasses: 'bg-emerald-50/70 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10 text-emerald-800 dark:text-emerald-300',
+      accentColor: 'from-emerald-500 to-teal-500',
+    };
+  }
+  if (score >= 70) {
+    return {
+      label: 'Good',
+      color: '#3b82f6', // blue-500
+      badgeClasses: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200/60 dark:border-blue-500/20',
+      ctaClasses: 'bg-blue-50/70 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10 text-blue-800 dark:text-blue-300',
+      accentColor: 'from-blue-500 to-indigo-500',
+    };
+  }
+  if (score >= 50) {
+    return {
+      label: 'Needs Work',
+      color: '#f59e0b', // amber-500
+      badgeClasses: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-500/20',
+      ctaClasses: 'bg-amber-50/70 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10 text-amber-800 dark:text-amber-300',
+      accentColor: 'from-amber-400 to-orange-500',
+    };
+  }
+  return {
+    label: 'Incomplete',
+    color: '#ef4444', // red-500
+    badgeClasses: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200/60 dark:border-red-500/20',
+    ctaClasses: 'bg-red-50/70 dark:bg-red-500/5 border border-red-100 dark:border-red-500/10 text-red-800 dark:text-red-300',
+    accentColor: 'from-red-500 to-rose-500',
+  };
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -104,8 +134,8 @@ const VaultHealthScore = ({ stats = {} }) => {
       <div className="p-6">
         {/* Header */}
         <div className="flex items-center gap-2 mb-5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: status.bg }}>
-            <FaShieldAlt style={{ color: status.color, fontSize: '14px' }} />
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${status.badgeClasses}`}>
+            <FaShieldAlt style={{ fontSize: '14px' }} />
           </div>
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
@@ -137,8 +167,7 @@ const VaultHealthScore = ({ stats = {} }) => {
 
           <div className="flex-1 min-w-0">
             <div
-              className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-3"
-              style={{ backgroundColor: status.bg, color: status.color }}
+              className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 ${status.badgeClasses}`}
             >
               {status.label}
             </div>
@@ -160,7 +189,7 @@ const VaultHealthScore = ({ stats = {} }) => {
 
         {/* Missing items — actionable CTA */}
         {missing.length > 0 && (
-          <div className="rounded-xl p-4 space-y-2" style={{ backgroundColor: status.bg }}>
+          <div className={`rounded-xl p-4 space-y-2 ${status.ctaClasses}`}>
             <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: status.color }}>
               Complete to improve score
             </p>
@@ -168,7 +197,7 @@ const VaultHealthScore = ({ stats = {} }) => {
               <Link
                 key={r.key}
                 to={r.route}
-                className="flex items-center justify-between group text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                className="flex items-center justify-between group text-xs font-semibold hover:text-slate-900 dark:hover:text-white"
               >
                 <span className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: status.color }} />

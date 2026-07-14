@@ -22,7 +22,6 @@ import { dashboardAPI } from '@/api/dashboardAPI';
 import { selectCurrentUser } from '@/features/auth/authSlice';
 import StatsCard from '@/components/dashboard/StatsCard';
 import VaultHealthScore from '@/components/dashboard/VaultHealthScore';
-import ProfileCompletionCard from '@/components/dashboard/ProfileCompletionCard';
 import QuickActionsCard from '@/components/dashboard/QuickActionsCard';
 import RecentActivityFeed from '@/components/dashboard/RecentActivityFeed';
 import HealthcareImage from '@/components/common/HealthcareImage';
@@ -210,16 +209,8 @@ const DashboardPage = () => {
       </motion.div>
 
       {/* ── Profile Completion + Activity ──────────────────────────────────── */}
-      <motion.div
-        variants={item}
-        className="grid grid-cols-1 lg:grid-cols-12 gap-6"
-      >
-        <div className="lg:col-span-5">
-          <ProfileCompletionCard stats={stats} />
-        </div>
-        <div className="lg:col-span-7">
-          <RecentActivityFeed scans={recentScans} logs={recentLogs} />
-        </div>
+      <motion.div variants={item}>
+        <RecentActivityFeed scans={recentScans} logs={recentLogs} />
       </motion.div>
     </motion.div>
   );
