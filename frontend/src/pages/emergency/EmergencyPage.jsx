@@ -265,15 +265,12 @@ const EmergencyPage = () => {
   const [location, setLocation] = useState(null); // visitor's city, country
 
   // ── Lock the entire page to light mode ──────────────────────────────────────
-  // This runs before any render and cannot be overridden by Tailwind dark classes,
-  // Samsung browser night mode, Android eye-care filters, or OS color-scheme prefs.
   useEffect(() => {
     const html = document.documentElement;
     const prevColorScheme = html.style.colorScheme;
     const prevBg = html.style.backgroundColor;
     const hadDark = html.classList.contains('dark');
 
-    // Immediately force light
     html.classList.remove('dark');
     html.style.colorScheme = 'light';
     html.style.backgroundColor = '#ffffff';
@@ -282,7 +279,6 @@ const EmergencyPage = () => {
     document.body.style.color = '#0f172a';
 
     return () => {
-      // Restore when navigating back to the main app
       if (hadDark) html.classList.add('dark');
       html.style.colorScheme = prevColorScheme;
       html.style.backgroundColor = prevBg;
