@@ -72,6 +72,13 @@ exports.getDashboardData = async (req, res, next) => {
       documentsCount,
       scansCount,
       profileCompletion: completion,
+      // Extended stats for VaultHealthScore widget
+      bloodGroup: profile?.bloodGroup || null,
+      allergiesCount: medicalInfo?.allergies?.length || 0,
+      medicinesCount: medicalInfo?.currentMedicines?.length || 0,
+      chronicCount: medicalInfo?.chronicDiseases?.length || 0,
+      height: profile?.height || null,
+      weight: profile?.weight || null,
     };
 
     // 4. Return success response

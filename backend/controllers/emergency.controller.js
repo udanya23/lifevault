@@ -65,12 +65,16 @@ exports.getEmergencyInfo = async (req, res, next) => {
       userAgent,
     }).catch((err) => console.error('QR scan log failed:', err.message));
 
-    // Strict field whitelist — only life-saving data
+    // Strict field whitelist — life-saving + clinically useful data
     const emergencyData = {
       name: user.name,
       bloodGroup: profile?.bloodGroup && profile.bloodGroup !== 'unknown'
         ? profile.bloodGroup
         : null,
+      // Physical vitals — critical for drug dosage calculations
+      height: profile?.height || null,   // cm
+      weight: profile?.weight || null,   // kg
+      dob: profile?.dob || null,         // for age calculation on frontend
       emergencyContacts: contacts.map((c) => ({
         name: c.name,
         relationship: c.relationship,
@@ -78,11 +82,14 @@ exports.getEmergencyInfo = async (req, res, next) => {
         isPrimary: c.isPrimary,
       })),
       allergies: medicalInfo?.allergies?.length ? medicalInfo.allergies : [],
+      chronicDiseases: medicalInfo?.chronicDiseases?.length
+        ? medicalInfo.chronicDiseases
+        : [],
       currentMedicines: medicalInfo?.currentMedicines?.length
         ? medicalInfo.currentMedicines
         : [],
+      medicalNotes: medicalInfo?.medicalNotes || null,
       // Server-detected location of the person who scanned the QR code.
-      // Uses the same IP detection logic as the activity log — always consistent.
       scannerLocation: geo?.area || null,
     };
 
