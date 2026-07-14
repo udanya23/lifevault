@@ -9,6 +9,7 @@ import {
   FaQrcode,
   FaFileMedical,
   FaFileImage,
+  FaStream,
   FaHistory,
   FaCog,
   FaArrowRight,
@@ -44,6 +45,15 @@ const actions = [
     hoverBg: 'hover:bg-violet-50/40 dark:hover:bg-violet-900/10',
   },
   {
+    label: 'Health Timeline',
+    desc: 'Chronological health events',
+    path: ROUTES.TIMELINE,
+    icon: FaStream,
+    iconClass: 'bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',
+    hoverBorder: 'hover:border-cyan-200/70 dark:hover:border-cyan-700/50',
+    hoverBg: 'hover:bg-cyan-50/40 dark:hover:bg-cyan-900/10',
+  },
+  {
     label: 'Activity Logs',
     desc: 'Review login & scan history',
     path: ROUTES.ACTIVITY,
@@ -71,7 +81,7 @@ const QuickActionsCard = () => (
       </h3>
     </div>
 
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
       {actions.map((act) => (
         <Link
           key={act.label}

@@ -70,6 +70,20 @@ const documentStorage = new CloudinaryStorage({
   },
 });
 
+/** Timeline event attachments (PDF + images) */
+const timelineStorage = new CloudinaryStorage({
+  cloudinary,
+  params: (req, file) => {
+    const isPDF = file.mimetype === 'application/pdf';
+    return {
+      folder: 'lifevault/timeline',
+      resource_type: isPDF ? 'raw' : 'image',
+      allowed_formats: isPDF ? ['pdf'] : ['jpg', 'jpeg', 'png', 'webp'],
+      public_id: `tl_${req.user?.id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    };
+  },
+});
+
 /**
  * Delete a file from Cloudinary by its public_id.
  * Called when a user deletes a document or replaces their profile photo.
@@ -94,5 +108,6 @@ module.exports = {
   cloudinary,
   profilePhotoStorage,
   documentStorage,
+  timelineStorage,
   deleteFromCloudinary,
 };

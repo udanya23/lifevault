@@ -27,6 +27,20 @@ const BLOOD_GROUPS = Object.freeze(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 
 // ── Gender Options ──────────────────────────────────────────────────────────
 const GENDERS = Object.freeze(['male', 'female', 'other', 'prefer_not_to_say']);
 
+// ── Health Timeline Categories ───────────────────────────────────────────────
+const TIMELINE_CATEGORIES = Object.freeze({
+  DOCTOR_VISIT: 'doctor_visit',
+  PRESCRIPTION: 'prescription',
+  SURGERY: 'surgery',
+  VACCINATION: 'vaccination',
+  LAB_TEST: 'lab_test',
+  SCAN: 'scan',
+  HOSPITAL_ADMISSION: 'hospital_admission',
+  MEDICATION: 'medication',
+  INSURANCE: 'insurance',
+  EMERGENCY_RECORD: 'emergency_record',
+});
+
 // ── Activity Log Actions ────────────────────────────────────────────────────
 const ACTIVITY_ACTIONS = Object.freeze({
   REGISTER: 'register',
@@ -38,6 +52,9 @@ const ACTIVITY_ACTIONS = Object.freeze({
   PROFILE_UPDATE: 'profile_update',
   DOCUMENT_UPLOAD: 'document_upload',
   DOCUMENT_DELETE: 'document_delete',
+  TIMELINE_CREATE: 'timeline_create',
+  TIMELINE_UPDATE: 'timeline_update',
+  TIMELINE_DELETE: 'timeline_delete',
   QR_GENERATED: 'qr_generated',
   QR_SCANNED: 'qr_scanned',
   ACCOUNT_DELETED: 'account_deleted',
@@ -57,6 +74,7 @@ const UPLOAD = Object.freeze({
   CLOUDINARY_FOLDERS: {
     PROFILE_PHOTOS: 'lifevault/profile-photos',
     DOCUMENTS: 'lifevault/documents',
+    TIMELINE: 'lifevault/timeline',
   },
 });
 
@@ -89,6 +107,7 @@ const OTP = Object.freeze({
 module.exports = {
   ROLES,
   DOCUMENT_TYPES,
+  TIMELINE_CATEGORIES,
   BLOOD_GROUPS,
   GENDERS,
   ACTIVITY_ACTIONS,

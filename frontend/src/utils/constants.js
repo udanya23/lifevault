@@ -49,6 +49,27 @@ export const ALLOWED_DOCUMENT_TYPES = [
 ];
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
+// ── Health Timeline ─────────────────────────────────────────────────────────
+export const TIMELINE_CATEGORIES = [
+  { value: 'doctor_visit', label: 'Doctor Visit', color: 'blue' },
+  { value: 'prescription', label: 'Prescription', color: 'indigo' },
+  { value: 'surgery', label: 'Surgery', color: 'red' },
+  { value: 'vaccination', label: 'Vaccination', color: 'emerald' },
+  { value: 'lab_test', label: 'Lab Test', color: 'cyan' },
+  { value: 'scan', label: 'Scan', color: 'violet' },
+  { value: 'hospital_admission', label: 'Hospital Admission', color: 'orange' },
+  { value: 'medication', label: 'Medication', color: 'teal' },
+  { value: 'insurance', label: 'Insurance', color: 'amber' },
+  { value: 'emergency_record', label: 'Emergency Record', color: 'rose' },
+];
+
+export const getTimelineCategoryMeta = (value) =>
+  TIMELINE_CATEGORIES.find((c) => c.value === value) || {
+    value,
+    label: value,
+    color: 'slate',
+  };
+
 // ── Routes ─────────────────────────────────────────────────────────────────
 export const ROUTES = Object.freeze({
   HOME: '/',
@@ -66,6 +87,7 @@ export const ROUTES = Object.freeze({
   QR_CODE: '/qr-code',
   SETTINGS: '/settings',
   ACTIVITY: '/activity',
+  TIMELINE: '/timeline',
   ADMIN: '/admin',
   ADMIN_USERS: '/admin/users',
 });

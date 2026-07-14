@@ -38,6 +38,7 @@ import EmergencyPage from '@/pages/emergency/EmergencyPage';
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
 import ActivityLogPage from '@/pages/activity/ActivityLogPage';
+import TimelinePage from '@/pages/timeline/TimelinePage';
 import SettingsPage from '@/pages/settings/SettingsPage';
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import NotFoundPage from '@/pages/NotFoundPage';
@@ -191,6 +192,7 @@ function App() {
           <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
           <Route path={ROUTES.DOCUMENTS} element={<DocumentsPage />} />
           <Route path={ROUTES.QR_CODE} element={<QRCodePage />} />
+          <Route path={ROUTES.TIMELINE} element={<TimelinePage />} />
           <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
           <Route path={ROUTES.ACTIVITY} element={<ActivityLogPage />} />
         </Route>

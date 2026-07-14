@@ -21,6 +21,7 @@ import {
   FaCog,
   FaHistory,
   FaShieldAlt,
+  FaStream,
   FaBars,
   FaMoon,
   FaSun,
@@ -51,6 +52,7 @@ const MENU_ITEMS = [
   { label: 'Medical Profile',  path: ROUTES.PROFILE,    icon: FaUser },
   { label: 'Secure Documents', path: ROUTES.DOCUMENTS,  icon: FaFolder },
   { label: 'QR Code Access',   path: ROUTES.QR_CODE,    icon: FaQrcode },
+  { label: 'Health Timeline',  path: ROUTES.TIMELINE,   icon: FaStream },
   { label: 'Activity Logs',    path: ROUTES.ACTIVITY,   icon: FaHistory },
   { label: 'Settings',         path: ROUTES.SETTINGS,   icon: FaCog },
 ];
@@ -66,6 +68,7 @@ const PAGE_TITLES = {
   [ROUTES.PROFILE]:   'Medical Profile',
   [ROUTES.DOCUMENTS]: 'Secure Documents',
   [ROUTES.QR_CODE]:   'QR Code & Emergency',
+  [ROUTES.TIMELINE]:  'Health Timeline',
   [ROUTES.SETTINGS]:  'Account Settings',
   [ROUTES.ACTIVITY]:  'Activity Logs',
   [ROUTES.ADMIN]:     'Admin Control Center',
@@ -77,12 +80,12 @@ const SidebarLink = ({ item, isCollapsed }) => (
     to={item.path}
     title={isCollapsed ? item.label : undefined}
     className={({ isActive }) =>
-      `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold
+      `relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold
        transition-all duration-200 cursor-pointer group
        ${
          isActive
-           ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.35)]'
-           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/70'
+           ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.3)]'
+           : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
        }
        ${isCollapsed ? 'justify-center' : ''}`
     }
@@ -90,8 +93,8 @@ const SidebarLink = ({ item, isCollapsed }) => (
     {({ isActive }) => (
       <>
         <item.icon
-          className={`h-4.5 w-4.5 shrink-0 transition-transform duration-200 ${
-            isActive ? 'text-white' : 'text-slate-500 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300'
+          className={`h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+            isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-100'
           }`}
           aria-hidden="true"
         />
@@ -100,7 +103,7 @@ const SidebarLink = ({ item, isCollapsed }) => (
         )}
         {/* Active glow dot */}
         {isActive && !isCollapsed && (
-          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60 shrink-0" aria-hidden="true" />
+          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/70 shrink-0 animate-pulse" aria-hidden="true" />
         )}
       </>
     )}
@@ -109,14 +112,14 @@ const SidebarLink = ({ item, isCollapsed }) => (
 
 // ── Sidebar Nav ───────────────────────────────────────────────────────────────
 const SidebarNav = ({ isCollapsed, userRole }) => (
-  <div className="space-y-1 px-3">
+  <div className="space-y-1.5 px-3">
     {MENU_ITEMS.map((item) => (
       <SidebarLink key={item.path} item={item} isCollapsed={isCollapsed} />
     ))}
 
     {userRole === 'admin' && (
       <>
-        <div className={`pt-3 mt-3 border-t border-slate-200/60 dark:border-slate-700/60 ${isCollapsed ? 'px-0' : ''}`} />
+        <div className={`pt-3.5 mt-3.5 border-t border-slate-800 ${isCollapsed ? 'px-0' : ''}`} />
         <SidebarLink item={ADMIN_ITEM} isCollapsed={isCollapsed} />
       </>
     )}
@@ -174,21 +177,20 @@ const AppLayout = () => {
         aria-label="Dashboard sidebar"
         className={`
           hidden md:flex flex-col shrink-0 h-screen sticky top-0
-          bg-white dark:bg-slate-950
-          border-r border-slate-200/70 dark:border-slate-800/70
-          transition-all duration-300 ease-in-out
+          bg-slate-900 border-r border-slate-800
+          transition-all duration-300 ease-in-out z-40
           ${isCollapsed ? 'w-[72px]' : 'w-64'}
         `}
       >
         {/* Brand */}
-        <div className={`flex items-center border-b border-slate-100 dark:border-slate-800/80 h-16 px-4 shrink-0 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+        <div className={`flex items-center border-b border-slate-800/80 h-16 px-4 shrink-0 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!isCollapsed && (
             <Link to={ROUTES.DASHBOARD} className="flex items-center gap-2.5 min-w-0 group">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-[0_2px_8px_rgba(37,99,235,0.3)] shrink-0 transition-transform duration-200 group-hover:scale-105">
                 <FaShieldAlt className="h-4 w-4 text-white" aria-hidden="true" />
               </div>
-              <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white truncate">
-                Life<span className="bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">Vault</span>
+              <span className="font-extrabold text-base tracking-tight text-white truncate">
+                Life<span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Vault</span>
               </span>
             </Link>
           )}
@@ -202,7 +204,7 @@ const AppLayout = () => {
           {!isCollapsed && (
             <button
               onClick={() => setIsCollapsed(true)}
-              className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-white transition-all duration-150 cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-150 cursor-pointer"
               aria-label="Collapse sidebar"
             >
               <FaChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
@@ -212,7 +214,7 @@ const AppLayout = () => {
           {isCollapsed && (
             <button
               onClick={() => setIsCollapsed(false)}
-              className="absolute -right-3 top-6 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-blue-600 shadow-sm transition-colors cursor-pointer"
+              className="absolute -right-3 top-6 w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 hover:text-white shadow-sm transition-colors cursor-pointer"
               aria-label="Expand sidebar"
             >
               <FaChevronRight className="h-2.5 w-2.5" aria-hidden="true" />
@@ -221,12 +223,12 @@ const AppLayout = () => {
         </div>
 
         {/* Nav */}
-        <div className="flex-1 overflow-y-auto py-4 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto py-4 scrollbar-none">
           <SidebarNav isCollapsed={isCollapsed} userRole={userRole} />
         </div>
 
         {/* User card */}
-        <div className={`shrink-0 border-t border-slate-100 dark:border-slate-800/80 p-4 ${isCollapsed ? 'flex justify-center' : 'flex items-center gap-3'}`}>
+        <div className={`shrink-0 border-t border-slate-800 p-4 ${isCollapsed ? 'flex justify-center' : 'flex items-center gap-3'}`}>
           <Avatar
             src={user.profilePhoto?.url}
             name={user.name}
@@ -234,11 +236,11 @@ const AppLayout = () => {
             ring
           />
           {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-slate-900 dark:text-white truncate leading-none">
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-xs font-bold text-white truncate leading-none">
                 {user.name}
               </p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+              <p className="text-[10px] text-slate-400 truncate mt-1">
                 {user.email}
               </p>
             </div>
@@ -266,22 +268,22 @@ const AppLayout = () => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="fixed top-0 bottom-0 left-0 z-50 w-64 md:hidden flex flex-col bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800"
+              className="fixed top-0 bottom-0 left-0 z-50 w-64 md:hidden flex flex-col bg-slate-900 border-r border-slate-800"
               aria-label="Mobile navigation drawer"
             >
               {/* Header */}
-              <div className="flex items-center justify-between h-16 px-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center justify-between h-16 px-4 border-b border-slate-800 shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-[0_2px_8px_rgba(37,99,235,0.3)]">
                     <FaShieldAlt className="h-4 w-4 text-white" aria-hidden="true" />
                   </div>
-                  <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
-                    Life<span className="bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">Vault</span>
+                  <span className="font-extrabold text-base tracking-tight text-white">
+                    Life<span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Vault</span>
                   </span>
                 </div>
                 <button
                   onClick={() => dispatch(toggleSidebar())}
-                  className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
                   aria-label="Close menu"
                 >
                   <FaChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
@@ -289,16 +291,16 @@ const AppLayout = () => {
               </div>
 
               {/* Nav */}
-              <div className="flex-1 overflow-y-auto py-4">
+              <div className="flex-1 overflow-y-auto py-4 scrollbar-none">
                 <SidebarNav isCollapsed={false} userRole={userRole} />
               </div>
 
               {/* User */}
-              <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3 shrink-0">
+              <div className="p-4 border-t border-slate-800 flex items-center gap-3 shrink-0">
                 <Avatar src={user.profilePhoto?.url} name={user.name} size="sm" ring />
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.name}</p>
-                  <p className="text-[10px] text-slate-400 truncate mt-0.5">{user.email}</p>
+                  <p className="text-xs font-bold text-white truncate leading-none">{user.name}</p>
+                  <p className="text-[10px] text-slate-400 truncate mt-1">{user.email}</p>
                 </div>
               </div>
             </motion.aside>

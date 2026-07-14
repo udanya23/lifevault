@@ -27,6 +27,7 @@ import documentsReducer from '@/features/documents/documentSlice';
 import qrReducer from '@/features/qr/qrSlice';
 import adminReducer from '@/features/admin/adminSlice';
 import activityReducer from '@/features/activity/activitySlice';
+import timelineReducer from '@/features/timeline/timelineSlice';
 
 const store = configureStore({
   reducer: {
@@ -38,6 +39,7 @@ const store = configureStore({
     qr: qrReducer,
     admin: adminReducer,
     activity: activityReducer,
+    timeline: timelineReducer,
   },
 
   middleware: (getDefaultMiddleware) =>

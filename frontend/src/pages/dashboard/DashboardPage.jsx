@@ -136,32 +136,33 @@ const DashboardPage = () => {
       animate="show"
       className="space-y-7 text-left"
     >
-      {/* ── Welcome Banner ────────────────────────────────────────────────────── */}
-      <motion.div variants={item} className="relative h-[220px] rounded-2xl overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-slate-900/40">
-        <HealthcareImage
-          src={HEALTHCARE_IMAGES.dashboardBanner}
-          alt="Medical dashboard and healthcare overview"
-          className="absolute inset-0 h-full rounded-none shadow-none"
-          rounded="rounded-none"
-          hover
-          placeholderLabel="Add dashboard-banner.jpg to public/images/"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/85 via-blue-800/70 to-blue-700/30 dark:from-slate-900/90 dark:via-slate-900/75 dark:to-transparent" aria-hidden="true" />
-        <div className="absolute inset-0 flex items-center justify-between flex-wrap gap-3 px-6 sm:px-8">
+      {/* ── Welcome Banner (CSS Mesh Gradient — No Image Dependencies) ── */}
+      <motion.div
+        variants={item}
+        className="relative h-[180px] rounded-2xl overflow-hidden shadow-md border border-slate-200/50 dark:border-slate-800/80 bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 text-left"
+      >
+        {/* Soft glowing mesh circles */}
+        <div className="absolute top-[-100px] right-[-100px] w-[300px] h-[300px] bg-blue-500/20 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute bottom-[-150px] left-[-50px] w-[350px] h-[350px] bg-indigo-500/15 rounded-full blur-[100px] pointer-events-none" />
+
+        {/* Abstract futuristic grid lines */}
+        <div className="absolute inset-0 opacity-5 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+
+        <div className="absolute inset-0 flex items-center justify-between flex-wrap gap-4 px-6 sm:px-8 z-10">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-white">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-tight">
               Welcome back, {firstName} 👋
             </h2>
-            <p className="text-sm text-blue-100/90 mt-1">
+            <p className="text-xs sm:text-sm text-blue-200/80 mt-1.5 font-medium max-w-[280px] sm:max-w-none">
               Here's an overview of your LifeVault security status.
             </p>
           </div>
-          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border backdrop-blur-sm ${
+          <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold border backdrop-blur-md shadow-sm ${
             stats.profileCompletion >= 80
               ? 'bg-emerald-500/20 text-emerald-100 border-emerald-400/30'
-              : 'bg-white/15 text-white border-white/25'
+              : 'bg-white/10 text-white border-white/20'
           }`}>
-            <span className={`w-2 h-2 rounded-full ${stats.profileCompletion >= 80 ? 'bg-emerald-400' : 'bg-blue-300'} animate-pulse`} aria-hidden="true" />
+            <span className={`w-2 h-2 rounded-full ${stats.profileCompletion >= 80 ? 'bg-emerald-400' : 'bg-blue-400'} animate-pulse`} aria-hidden="true" />
             Vault {stats.profileCompletion}% complete
           </div>
         </div>

@@ -172,6 +172,7 @@ app.use('/api/v1/emergency-contacts', require('./routes/emergencyContact.routes'
 app.use('/api/v1/qr', require('./routes/qr.routes'));
 app.use('/api/v1/dashboard', require('./routes/dashboard.routes'));
 app.use('/api/v1/activity', require('./routes/activity.routes'));
+app.use('/api/v1/timeline', require('./routes/timeline.routes'));
 app.use('/api/v1/admin', require('./routes/admin.routes'));
 app.use('/api/v1/emergency', require('./routes/emergency.routes'));
 

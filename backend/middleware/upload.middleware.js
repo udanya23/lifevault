@@ -10,7 +10,7 @@
 
 const multer = require('multer');
 const ApiError = require('../utils/ApiError');
-const { profilePhotoStorage, documentStorage } = require('../config/cloudinary');
+const { profilePhotoStorage, documentStorage, timelineStorage } = require('../config/cloudinary');
 
 // ── Profile Photo Upload Configuration ────────────────────────────────────────
 
@@ -84,7 +84,47 @@ const uploadDocument = (req, res, next) => {
   });
 };
 
+// ── Timeline attachment uploads (up to 5 files per request) ─────────────────
+
+const timelineUpload = multer({
+  storage: timelineStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 5,
+  },
+  fileFilter: (req, file, cb) => {
+    const isImage = file.mimetype.startsWith('image/');
+    const isPDF = file.mimetype === 'application/pdf';
+    if (isImage || isPDF) {
+      cb(null, true);
+    } else {
+      cb(
+        new ApiError(400, 'Invalid file type. Only PDFs and JPG/PNG/WEBP images are allowed.'),
+        false
+      );
+    }
+  },
+}).array('timelineFiles', 5);
+
+const uploadTimelineFiles = (req, res, next) => {
+  timelineUpload(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return next(ApiError.badRequest('File too large. Maximum size allowed is 5MB.'));
+      }
+      if (err.code === 'LIMIT_FILE_COUNT') {
+        return next(ApiError.badRequest('Too many files. Maximum 5 attachments per upload.'));
+      }
+      return next(ApiError.badRequest(err.message));
+    } else if (err) {
+      return next(err);
+    }
+    next();
+  });
+};
+
 module.exports = {
   uploadProfilePhoto,
   uploadDocument,
+  uploadTimelineFiles,
 };
