@@ -32,6 +32,25 @@ const EmergencyPage = () => {
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
 
+  // Force light mode on the emergency page — prevents yellow/discolored
+  // backgrounds caused by Android eye-care filters, Samsung browser dark mode,
+  // or system-level color scheme preferences on the viewer's device.
+  useEffect(() => {
+    const html = document.documentElement;
+    const prevColorScheme = html.style.colorScheme;
+    const hadDark = html.classList.contains('dark');
+
+    html.classList.remove('dark');
+    html.style.colorScheme = 'light';
+    html.style.backgroundColor = '#ffffff';
+
+    return () => {
+      if (hadDark) html.classList.add('dark');
+      html.style.colorScheme = prevColorScheme;
+      html.style.backgroundColor = '';
+    };
+  }, []);
+
   useEffect(() => {
     const fetchEmergency = async () => {
       try {
@@ -55,7 +74,10 @@ const EmergencyPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: '#ffffff', color: '#334155' }}
+      >
         <div className="text-center space-y-3">
           <FaSpinner className="h-9 w-9 text-blue-600 animate-spin mx-auto" aria-hidden="true" />
           <p className="text-sm font-semibold text-slate-500">Retrieving emergency profile…</p>
@@ -66,16 +88,19 @@ const EmergencyPage = () => {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
+      <div
+        className="min-h-screen flex items-center justify-center p-4"
+        style={{ backgroundColor: '#ffffff', color: '#334155' }}
+      >
         <div className="text-center max-w-sm space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-950/20 flex items-center justify-center text-red-500 mx-auto">
+          <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center text-red-500 mx-auto">
             <FaExclamationTriangle className="h-8 w-8 animate-bounce" aria-hidden="true" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white">
+            <h1 className="text-lg font-bold text-slate-900">
               Profile Not Available
             </h1>
-            <p className="text-xs text-slate-505 dark:text-slate-400 mt-1">{error}</p>
+            <p className="text-xs text-slate-500 mt-1">{error}</p>
           </div>
         </div>
       </div>
@@ -83,9 +108,15 @@ const EmergencyPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
-      {/* Emergency Header Banner */}
-      <div className="bg-red-650 dark:bg-red-900 text-white py-3 px-4 text-center sticky top-0 z-50 flex items-center justify-center gap-2 shadow-md">
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: '#f8fafc', color: '#0f172a' }}
+    >
+      {/* Emergency Header Banner — always red, never affected by dark/night mode */}
+      <div
+        className="text-white py-3 px-4 text-center sticky top-0 z-50 flex items-center justify-center gap-2 shadow-md"
+        style={{ backgroundColor: '#dc2626' }}
+      >
         <span className="w-2 h-2 rounded-full bg-white animate-pulse" aria-hidden="true" />
         <span className="text-xs font-extrabold tracking-widest uppercase">
           Emergency Medical Profile
