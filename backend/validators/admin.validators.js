@@ -24,6 +24,26 @@ const getUsersQuery = [
     .optional()
     .isIn(['all', 'active', 'suspended', 'unverified'])
     .withMessage('Invalid status filter'),
+  query('role')
+    .optional()
+    .isIn(['all', 'user', 'admin'])
+    .withMessage('Invalid role filter'),
+  validate,
+];
+
+const updateRoleRules = [
+  param('id').isMongoId().withMessage('Invalid user ID'),
+  body('role')
+    .notEmpty()
+    .withMessage('Role is required')
+    .isIn(['user', 'admin'])
+    .withMessage('Role must be either user or admin'),
+  validate,
+];
+
+const exportQuery = [
+  query('from').optional().isISO8601().withMessage('Invalid from date'),
+  query('to').optional().isISO8601().withMessage('Invalid to date'),
   validate,
 ];
 
@@ -40,6 +60,8 @@ const getReportsQuery = [
 module.exports = {
   userIdParam,
   updateStatusRules,
+  updateRoleRules,
   getUsersQuery,
   getReportsQuery,
+  exportQuery,
 };

@@ -5,10 +5,11 @@
  * breakdown, recent signups, recent scans, and top system actions.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
+import { toast } from 'react-toastify';
 import {
   BarChart,
   Bar,
@@ -31,6 +32,7 @@ import {
   FaPhoneAlt,
   FaArrowRight,
   FaClipboardList,
+  FaFileCsv,
 } from 'react-icons/fa';
 
 import {
@@ -42,6 +44,8 @@ import {
 } from '@/features/admin/adminSlice';
 import { ROUTES } from '@/utils/constants';
 import { formatDate, formatRelativeTime } from '@/utils/helpers';
+import { adminAPI } from '@/api/adminAPI';
+import { downloadBlob } from '@/utils/download';
 import StatsCard from '@/components/dashboard/StatsCard';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -102,6 +106,20 @@ const AdminDashboardPage = () => {
   const analytics = useSelector(selectAdminAnalytics);
   const reports = useSelector(selectAdminReports);
   const isLoading = useSelector(selectAdminLoading);
+  const [exportingScans, setExportingScans] = useState(false);
+
+  const handleExportScans = async () => {
+    setExportingScans(true);
+    try {
+      const res = await adminAPI.exportScans();
+      downloadBlob(res.data, `lifevault-qr-scans-${new Date().toISOString().slice(0, 10)}.csv`);
+      toast.success('QR scan history exported.');
+    } catch {
+      toast.error('Export failed. Please try again.');
+    } finally {
+      setExportingScans(false);
+    }
+  };
 
   useEffect(() => {
     dispatch(fetchAnalytics());
@@ -334,7 +352,21 @@ const AdminDashboardPage = () => {
 
         {/* Recent QR Scans */}
         <Card>
-          <SectionTitle>Recent QR Scans</SectionTitle>
+          <SectionTitle
+            action={
+              <button
+                type="button"
+                onClick={handleExportScans}
+                disabled={exportingScans}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              >
+                <FaFileCsv className="h-3 w-3" aria-hidden="true" />
+                {exportingScans ? 'Exporting…' : 'Export CSV'}
+              </button>
+            }
+          >
+            Recent QR Scans
+          </SectionTitle>
           {recentScans.length > 0 ? (
             <ul className="space-y-3">
               {recentScans.map((scan) => (

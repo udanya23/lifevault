@@ -71,7 +71,8 @@ const UserDetailModal = ({ userId, isOpen, onClose, onSuspendToggle, onDelete, a
       icon={FaUser}
       size="lg"
       footer={
-        user && (
+        user &&
+        user.role !== 'admin' && (
           <div className="flex flex-col sm:flex-row justify-end gap-2">
             <Button
               variant={user.isSuspended ? 'success' : 'outline'}
@@ -108,6 +109,9 @@ const UserDetailModal = ({ userId, isOpen, onClose, onSuspendToggle, onDelete, a
                 <h4 className="text-base font-extrabold text-slate-900 dark:text-white truncate">
                   {user.name}
                 </h4>
+                {user.role === 'admin' && (
+                  <Badge variant="purple" size="sm">Admin</Badge>
+                )}
                 {user.isSuspended ? (
                   <Badge variant="danger" size="sm">Suspended</Badge>
                 ) : user.isEmailVerified ? (

@@ -19,17 +19,24 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaArrowLeft,
+  FaUserShield,
+  FaUser,
+  FaFileCsv,
 } from 'react-icons/fa';
 
 import {
   fetchUsers,
   fetchUserDetail,
   updateUserStatus,
+  updateUserRole,
   deleteUser,
   selectAdminUsers,
   selectAdminUsersMeta,
   selectAdminUsersLoading,
 } from '@/features/admin/adminSlice';
+import { selectCurrentUser } from '@/features/auth/authSlice';
+import { adminAPI } from '@/api/adminAPI';
+import { downloadBlob } from '@/utils/download';
 import UserDetailModal from '@/components/admin/UserDetailModal';
 import { ROUTES } from '@/utils/constants';
 import { formatDate } from '@/utils/helpers';
@@ -42,10 +49,16 @@ import Badge from '@/components/common/Badge';
 import Avatar from '@/components/common/Avatar';
 
 const STATUS_OPTIONS = [
-  { value: 'all', label: 'All Users' },
+  { value: 'all', label: 'All Statuses' },
   { value: 'active', label: 'Active' },
   { value: 'suspended', label: 'Suspended' },
   { value: 'unverified', label: 'Unverified Email' },
+];
+
+const ROLE_OPTIONS = [
+  { value: 'all', label: 'All Roles' },
+  { value: 'user', label: 'Users' },
+  { value: 'admin', label: 'Administrators' },
 ];
 
 const AdminUsersPage = () => {
@@ -53,14 +66,20 @@ const AdminUsersPage = () => {
   const users = useSelector(selectAdminUsers);
   const meta = useSelector(selectAdminUsersMeta);
   const isLoading = useSelector(selectAdminUsersLoading);
+  const currentUser = useSelector(selectCurrentUser) || {};
 
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewTarget, setViewTarget] = useState(null);
+  const [roleTarget, setRoleTarget] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
+  const [exporting, setExporting] = useState(false);
+
+  const currentUserId = String(currentUser.id || currentUser._id || '');
 
   // Debounce search input
   useEffect(() => {
@@ -72,14 +91,51 @@ const AdminUsersPage = () => {
   }, [searchInput]);
 
   useEffect(() => {
-    dispatch(fetchUsers({ page, limit: 10, search: search.trim(), status }));
-  }, [dispatch, page, search, status]);
+    dispatch(fetchUsers({ page, limit: 10, search: search.trim(), status, role: roleFilter }));
+  }, [dispatch, page, search, status, roleFilter]);
 
   const handleSearchChange = (e) => setSearchInput(e.target.value);
 
   const handleStatusChange = (e) => {
     setStatus(e.target.value);
     setPage(1);
+  };
+
+  const handleRoleFilterChange = (e) => {
+    setRoleFilter(e.target.value);
+    setPage(1);
+  };
+
+  const handleRoleChange = async () => {
+    if (!roleTarget) return;
+    const newRole = roleTarget.role === 'admin' ? 'user' : 'admin';
+    setActionLoading(roleTarget._id);
+    try {
+      await dispatch(updateUserRole({ id: roleTarget._id, role: newRole })).unwrap();
+      toast.success(
+        newRole === 'admin'
+          ? `${roleTarget.name} is now an administrator.`
+          : `${roleTarget.name} is now a regular user.`
+      );
+      setRoleTarget(null);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update role.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleExportUsers = async () => {
+    setExporting(true);
+    try {
+      const res = await adminAPI.exportUsers();
+      downloadBlob(res.data, `lifevault-users-${new Date().toISOString().slice(0, 10)}.csv`);
+      toast.success('User list exported.');
+    } catch {
+      toast.error('Export failed. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleSuspendToggle = async (user, { refreshDetail = false } = {}) => {
@@ -141,9 +197,17 @@ const AdminUsersPage = () => {
             User Management
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            {meta.total} user{meta.total !== 1 ? 's' : ''} registered
+            {meta.total} account{meta.total !== 1 ? 's' : ''} registered
           </p>
         </div>
+        <Button
+          variant="outline"
+          icon={FaFileCsv}
+          isLoading={exporting}
+          onClick={handleExportUsers}
+        >
+          Export CSV
+        </Button>
       </div>
 
       {/* Filters */}
@@ -157,7 +221,15 @@ const AdminUsersPage = () => {
               icon={FaSearch}
             />
           </div>
-          <div className="w-full sm:w-48">
+          <div className="w-full sm:w-44">
+            <Select
+              options={ROLE_OPTIONS}
+              value={roleFilter}
+              onChange={handleRoleFilterChange}
+              placeholder="Filter role"
+            />
+          </div>
+          <div className="w-full sm:w-44">
             <Select
               options={STATUS_OPTIONS}
               value={status}
@@ -209,9 +281,17 @@ const AdminUsersPage = () => {
                           size="sm"
                         />
                         <div className="min-w-0">
-                          <p className="font-semibold text-slate-900 dark:text-white truncate">
-                            {user.name}
-                          </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-slate-900 dark:text-white truncate">
+                              {user.name}
+                            </p>
+                            {user.role === 'admin' && (
+                              <Badge variant="purple" size="sm" icon={FaUserShield}>Admin</Badge>
+                            )}
+                            {String(user._id) === currentUserId && (
+                              <Badge variant="default" size="sm">You</Badge>
+                            )}
+                          </div>
                           <p className="text-xs text-slate-500 truncate">{user.email}</p>
                         </div>
                       </div>
@@ -221,7 +301,7 @@ const AdminUsersPage = () => {
                     </td>
                     <td className="py-3 px-4">{getUserStatusBadge(user)}</td>
                     <td className="py-3 px-4">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-2 flex-wrap">
                         <Button
                           variant="outline"
                           size="sm"
@@ -230,23 +310,37 @@ const AdminUsersPage = () => {
                         >
                           View
                         </Button>
-                        <Button
-                          variant={user.isSuspended ? 'success' : 'outline'}
-                          size="sm"
-                          icon={user.isSuspended ? FaCheckCircle : FaBan}
-                          isLoading={actionLoading === user._id}
-                          onClick={() => handleSuspendToggle(user)}
-                        >
-                          {user.isSuspended ? 'Unsuspend' : 'Suspend'}
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          icon={FaTrash}
-                          onClick={() => setDeleteTarget(user)}
-                        >
-                          Delete
-                        </Button>
+                        {String(user._id) !== currentUserId && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            icon={user.role === 'admin' ? FaUser : FaUserShield}
+                            onClick={() => setRoleTarget(user)}
+                          >
+                            {user.role === 'admin' ? 'Demote' : 'Make Admin'}
+                          </Button>
+                        )}
+                        {user.role !== 'admin' && (
+                          <>
+                            <Button
+                              variant={user.isSuspended ? 'success' : 'outline'}
+                              size="sm"
+                              icon={user.isSuspended ? FaCheckCircle : FaBan}
+                              isLoading={actionLoading === user._id}
+                              onClick={() => handleSuspendToggle(user)}
+                            >
+                              {user.isSuspended ? 'Unsuspend' : 'Suspend'}
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              icon={FaTrash}
+                              onClick={() => setDeleteTarget(user)}
+                            >
+                              Delete
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -299,6 +393,45 @@ const AdminUsersPage = () => {
         }}
         actionLoading={actionLoading === viewTarget?._id}
       />
+
+      {/* Role Change Confirmation */}
+      <Modal
+        isOpen={!!roleTarget}
+        onClose={() => setRoleTarget(null)}
+        title={roleTarget?.role === 'admin' ? 'Demote Administrator' : 'Promote to Administrator'}
+        icon={FaUserShield}
+        size="sm"
+      >
+        {roleTarget?.role === 'admin' ? (
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
+            <strong>{roleTarget?.name}</strong> will lose access to the admin control
+            center and become a regular user. Their personal vault stays intact.
+          </p>
+        ) : (
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
+            <strong>{roleTarget?.name}</strong> will gain full administrator access —
+            they can manage users, view system activity, and export platform data.
+          </p>
+        )}
+        <p className="text-xs text-slate-400 mb-6">
+          They will be signed out and the change takes effect on their next login.
+          This action is recorded in the audit log.
+        </p>
+        <div className="flex gap-3">
+          <Button variant="outline" fullWidth onClick={() => setRoleTarget(null)}>
+            Cancel
+          </Button>
+          <Button
+            variant={roleTarget?.role === 'admin' ? 'danger' : 'primary'}
+            fullWidth
+            icon={roleTarget?.role === 'admin' ? FaUser : FaUserShield}
+            isLoading={actionLoading === roleTarget?._id}
+            onClick={handleRoleChange}
+          >
+            {roleTarget?.role === 'admin' ? 'Demote to User' : 'Make Admin'}
+          </Button>
+        </div>
+      </Modal>
 
       {/* Delete Confirmation */}
       <Modal

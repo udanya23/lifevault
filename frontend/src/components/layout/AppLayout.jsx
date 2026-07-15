@@ -79,64 +79,158 @@ const PAGE_TITLES = {
 };
 
 // ── Nav Link ──────────────────────────────────────────────────────────────────
-const SidebarLink = ({ item, isCollapsed }) => (
-  <NavLink
-    to={item.path}
-    end={item.end}
-    title={isCollapsed ? item.label : undefined}
-    className={({ isActive }) =>
-      `relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold
-       transition-all duration-200 cursor-pointer group
-       ${
-         isActive
-           ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.3)]'
-           : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-       }
-       ${isCollapsed ? 'justify-center' : ''}`
-    }
-  >
-    {({ isActive }) => (
-      <>
-        <item.icon
-          className={`h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-105 ${
-            isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-100'
-          }`}
-          aria-hidden="true"
-        />
-        {!isCollapsed && (
-          <span className="truncate leading-none">{item.label}</span>
-        )}
-        {/* Active glow dot */}
-        {isActive && !isCollapsed && (
-          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/70 shrink-0 animate-pulse" aria-hidden="true" />
-        )}
-      </>
-    )}
-  </NavLink>
-);
+const SidebarLink = ({ item, isCollapsed, variant = 'default' }) => {
+  const activeClasses =
+    variant === 'admin'
+      ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-[0_4px_12px_rgba(124,58,237,0.35)]'
+      : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.3)]';
+
+  return (
+    <NavLink
+      to={item.path}
+      end={item.end}
+      title={isCollapsed ? item.label : undefined}
+      className={({ isActive }) =>
+        `relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold
+         transition-all duration-200 cursor-pointer group
+         ${isActive ? activeClasses : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'}
+         ${isCollapsed ? 'justify-center' : ''}`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <item.icon
+            className={`h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+              isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-100'
+            }`}
+            aria-hidden="true"
+          />
+          {!isCollapsed && (
+            <span className="truncate leading-none">{item.label}</span>
+          )}
+          {/* Active glow dot */}
+          {isActive && !isCollapsed && (
+            <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/70 shrink-0 animate-pulse" aria-hidden="true" />
+          )}
+        </>
+      )}
+    </NavLink>
+  );
+};
 
 // ── Sidebar Nav ───────────────────────────────────────────────────────────────
-const SidebarNav = ({ isCollapsed, userRole }) => (
-  <div className="space-y-1.5 px-3">
-    {MENU_ITEMS.map((item) => (
-      <SidebarLink key={item.path} item={item} isCollapsed={isCollapsed} />
-    ))}
+// For admins the Control Center leads and personal modules live in a
+// collapsible "My Vault" group (collapsed by default) so admin tools stay
+// the visual focus. Preference persists across sessions.
+const PERSONAL_NAV_KEY = 'lifevault-admin-personal-nav';
 
-    {userRole === 'admin' && (
-      <>
-        <div className={`pt-3.5 mt-3.5 border-t border-slate-800 ${isCollapsed ? 'px-0' : ''}`} />
-        {!isCollapsed && (
-          <p className="px-3.5 pb-1 text-[9px] font-extrabold uppercase tracking-[0.18em] text-slate-500">
-            Administration
-          </p>
-        )}
-        {ADMIN_ITEMS.map((item) => (
+const SidebarNav = ({ isCollapsed, userRole }) => {
+  const location = useLocation();
+  const isAdmin = userRole === 'admin';
+
+  const isOnPersonalRoute = MENU_ITEMS.some((item) =>
+    location.pathname.startsWith(item.path)
+  );
+
+  const [personalOpen, setPersonalOpen] = useState(
+    () => localStorage.getItem(PERSONAL_NAV_KEY) === 'open'
+  );
+
+  // Keep the group open while the admin is actually on a personal page
+  useEffect(() => {
+    if (isAdmin && isOnPersonalRoute) setPersonalOpen(true);
+  }, [isAdmin, isOnPersonalRoute]);
+
+  const togglePersonal = () => {
+    setPersonalOpen((prev) => {
+      localStorage.setItem(PERSONAL_NAV_KEY, prev ? 'closed' : 'open');
+      return !prev;
+    });
+  };
+
+  // Regular users: unchanged flat menu
+  if (!isAdmin) {
+    return (
+      <div className="space-y-1.5 px-3">
+        {MENU_ITEMS.map((item) => (
           <SidebarLink key={item.path} item={item} isCollapsed={isCollapsed} />
         ))}
-      </>
-    )}
-  </div>
-);
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1.5 px-3">
+      {/* ── Control Center (highlighted, always first) ── */}
+      {!isCollapsed && (
+        <p className="px-3.5 pb-1.5 pt-1 text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-400 flex items-center gap-1.5">
+          <FaShieldAlt className="h-2.5 w-2.5" aria-hidden="true" />
+          Control Center
+        </p>
+      )}
+      <div
+        className={`space-y-1 rounded-2xl ${
+          isCollapsed
+            ? ''
+            : 'p-1.5 bg-violet-500/[0.07] border border-violet-500/15'
+        }`}
+      >
+        {ADMIN_ITEMS.map((item) => (
+          <SidebarLink key={item.path} item={item} isCollapsed={isCollapsed} variant="admin" />
+        ))}
+      </div>
+
+      <div className="pt-3 mt-3 border-t border-slate-800" />
+
+      {/* ── My Vault (collapsible personal modules) ── */}
+      {isCollapsed ? (
+        // Icon-only sidebar: show personal icons directly below the divider
+        MENU_ITEMS.map((item) => (
+          <SidebarLink key={item.path} item={item} isCollapsed />
+        ))
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={togglePersonal}
+            aria-expanded={personalOpen}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500 hover:text-slate-300 hover:bg-slate-800/40 transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              My Vault
+              <span className="px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[9px] font-bold tracking-normal normal-case">
+                {MENU_ITEMS.length}
+              </span>
+            </span>
+            <FaChevronDown
+              className={`h-2.5 w-2.5 transition-transform duration-200 ${
+                personalOpen ? 'rotate-180' : ''
+              }`}
+              aria-hidden="true"
+            />
+          </button>
+
+          <AnimatePresence initial={false}>
+            {personalOpen && (
+              <motion.div
+                key="personal-nav"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                className="space-y-1.5 overflow-hidden"
+              >
+                {MENU_ITEMS.map((item) => (
+                  <SidebarLink key={item.path} item={item} isCollapsed={false} />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
+    </div>
+  );
+};
 
 // ── App Layout ────────────────────────────────────────────────────────────────
 const AppLayout = () => {

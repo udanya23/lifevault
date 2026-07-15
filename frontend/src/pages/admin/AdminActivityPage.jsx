@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
+import { toast } from 'react-toastify';
 import {
   FaSearch,
   FaSpinner,
@@ -16,6 +17,7 @@ import {
   FaArrowLeft,
   FaClipboardList,
   FaTimes,
+  FaFileCsv,
 } from 'react-icons/fa';
 
 import {
@@ -26,6 +28,8 @@ import {
 } from '@/features/admin/adminSlice';
 import { ROUTES } from '@/utils/constants';
 import { formatDate, formatRelativeTime } from '@/utils/helpers';
+import { adminAPI } from '@/api/adminAPI';
+import { downloadBlob } from '@/utils/download';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import Card from '@/components/common/Card';
@@ -54,6 +58,7 @@ const AdminActivityPage = () => {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
 
   // Debounce search input
   useEffect(() => {
@@ -88,6 +93,22 @@ const AdminActivityPage = () => {
     setPage(1);
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await adminAPI.exportActivity({
+        from: from || undefined,
+        to: to || undefined,
+      });
+      downloadBlob(res.data, `lifevault-activity-${new Date().toISOString().slice(0, 10)}.csv`);
+      toast.success('Activity log exported.');
+    } catch {
+      toast.error('Export failed. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -95,19 +116,29 @@ const AdminActivityPage = () => {
       className="space-y-6 text-left"
     >
       {/* Header */}
-      <div>
-        <Link
-          to={ROUTES.ADMIN}
-          className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 mb-2"
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <Link
+            to={ROUTES.ADMIN}
+            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 mb-2"
+          >
+            <FaArrowLeft className="h-3 w-3" /> Back to Admin Overview
+          </Link>
+          <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white">
+            System Activity
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            {meta.total} log entr{meta.total !== 1 ? 'ies' : 'y'} · full platform audit trail
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          icon={FaFileCsv}
+          isLoading={exporting}
+          onClick={handleExport}
         >
-          <FaArrowLeft className="h-3 w-3" /> Back to Admin Overview
-        </Link>
-        <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white">
-          System Activity
-        </h2>
-        <p className="text-xs text-slate-500 mt-1">
-          {meta.total} log entr{meta.total !== 1 ? 'ies' : 'y'} · full platform audit trail
-        </p>
+          Export CSV
+        </Button>
       </div>
 
       {/* Filters */}

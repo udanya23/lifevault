@@ -19,7 +19,12 @@ import { motion } from 'framer-motion';
 import { FaEnvelope, FaLock, FaShieldAlt, FaChevronRight } from 'react-icons/fa';
 
 import { loginUser, clearAuthError } from '@/features/auth/authSlice';
-import { selectAuthLoading, selectAuthError, selectIsAuthenticated } from '@/features/auth/authSlice';
+import {
+  selectAuthLoading,
+  selectAuthError,
+  selectIsAuthenticated,
+  selectUserRole,
+} from '@/features/auth/authSlice';
 import { ROUTES } from '@/utils/constants';
 import Input from '@/components/common/Input';
 import Button from '@/components/common/Button';
@@ -42,8 +47,11 @@ const LoginPage = () => {
   const isLoading     = useSelector(selectAuthLoading);
   const authError     = useSelector(selectAuthError);
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const userRole      = useSelector(selectUserRole);
 
-  const from = location.state?.from?.pathname || ROUTES.DASHBOARD;
+  // Admins land on the Control Center; users on their personal dashboard
+  const defaultLanding = userRole === 'admin' ? ROUTES.ADMIN : ROUTES.DASHBOARD;
+  const from = location.state?.from?.pathname || defaultLanding;
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
@@ -72,7 +80,13 @@ const LoginPage = () => {
     const result = await dispatch(loginUser(data));
     if (loginUser.fulfilled.match(result)) {
       toast.success('Welcome back to LifeVault!');
-      navigate(from, { replace: true });
+      // Role comes from the login response (the selector may not be updated yet)
+      const payload = result.payload?.data ?? result.payload ?? {};
+      const role = payload.user?.role;
+      const landing =
+        location.state?.from?.pathname ||
+        (role === 'admin' ? ROUTES.ADMIN : ROUTES.DASHBOARD);
+      navigate(landing, { replace: true });
     } else if (loginUser.rejected.match(result)) {
       toast.error(result.payload?.message || 'Login failed. Please check your credentials.');
     }

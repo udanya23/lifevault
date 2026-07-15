@@ -15,6 +15,7 @@ const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 const { PAGINATION, ROLES } = require('../utils/constants');
 const { deleteUserAndData } = require('../services/admin.service');
+const { toCsv } = require('../utils/csv');
 
 // ── Analytics ─────────────────────────────────────────────────────────────────
 
@@ -161,8 +162,12 @@ exports.getUsers = async (req, res, next) => {
     const skip = (page - 1) * limit;
     const search = (req.query.search || '').trim();
     const status = req.query.status || 'all';
+    const roleFilter = req.query.role || 'all';
 
-    const query = { role: ROLES.USER };
+    const query = {};
+    if (roleFilter === 'admin') query.role = ROLES.ADMIN;
+    else if (roleFilter === 'user') query.role = ROLES.USER;
+    else query.role = { $in: [ROLES.USER, ROLES.ADMIN] };
 
     if (search) {
       query.$or = [
@@ -283,6 +288,62 @@ exports.updateUserStatus = async (req, res, next) => {
   }
 };
 
+// ── Update User Role (Promote / Demote) ──────────────────────────────────────
+
+exports.updateUserRole = async (req, res, next) => {
+  const { id } = req.params;
+  const { role } = req.body;
+
+  try {
+    if (id === req.user._id.toString()) {
+      return next(ApiError.badRequest('You cannot change your own role.'));
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return next(ApiError.notFound('User not found.'));
+    }
+
+    if (user.role === role) {
+      return next(ApiError.badRequest(`User already has the ${role} role.`));
+    }
+
+    // Never allow the platform to end up without an administrator
+    if (user.role === ROLES.ADMIN && role === ROLES.USER) {
+      const adminCount = await User.countDocuments({ role: ROLES.ADMIN });
+      if (adminCount <= 1) {
+        return next(
+          ApiError.badRequest('Cannot demote the last administrator. Promote another admin first.')
+        );
+      }
+    }
+
+    const previousRole = user.role;
+    user.role = role;
+
+    // Revoke sessions so new permissions take effect on next login
+    user.refreshToken = undefined;
+    await user.save();
+
+    await ActivityLog.create({
+      userId: req.user._id,
+      action: 'Admin Role Update',
+      description: `Admin changed role of ${user.email}: ${previousRole} → ${role}.`,
+      ipAddress: req.ip || 'Unknown',
+      userAgent: req.headers['user-agent'] || 'Unknown',
+    });
+
+    new ApiResponse(200, `User role updated to ${role}.`, {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    }).send(res);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ── Delete User ───────────────────────────────────────────────────────────────
 
 exports.deleteUser = async (req, res, next) => {
@@ -367,6 +428,138 @@ exports.getReports = async (req, res, next) => {
       totalPages: Math.ceil(total / limit),
       actions: actions.sort(),
     }).send(res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ── CSV Exports ───────────────────────────────────────────────────────────────
+
+const EXPORT_ROW_LIMIT = 10000;
+
+const sendCsv = (res, filename, csv) => {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.status(200).send(csv);
+};
+
+const buildDateFilter = (req, field = 'createdAt') => {
+  const filter = {};
+  if (req.query.from || req.query.to) {
+    filter[field] = {};
+    if (req.query.from) filter[field].$gte = new Date(req.query.from);
+    if (req.query.to) {
+      const to = new Date(req.query.to);
+      to.setHours(23, 59, 59, 999);
+      filter[field].$lte = to;
+    }
+  }
+  return filter;
+};
+
+const logExport = (req, what) =>
+  ActivityLog.create({
+    userId: req.user._id,
+    action: 'Admin Data Export',
+    description: `Admin exported ${what} as CSV.`,
+    ipAddress: req.ip || 'Unknown',
+    userAgent: req.headers['user-agent'] || 'Unknown',
+  });
+
+/** GET /admin/export/users — all accounts as CSV */
+exports.exportUsers = async (req, res, next) => {
+  try {
+    const users = await User.find({ role: { $in: [ROLES.USER, ROLES.ADMIN] } })
+      .sort({ createdAt: -1 })
+      .limit(EXPORT_ROW_LIMIT)
+      .select('name email role isEmailVerified isActive isSuspended createdAt');
+
+    const rows = users.map((u) => ({
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      status: u.isSuspended ? 'suspended' : u.isActive ? 'active' : 'inactive',
+      emailVerified: u.isEmailVerified ? 'yes' : 'no',
+      joined: u.createdAt?.toISOString(),
+    }));
+
+    const csv = toCsv(rows, [
+      { key: 'name', label: 'Name' },
+      { key: 'email', label: 'Email' },
+      { key: 'role', label: 'Role' },
+      { key: 'status', label: 'Status' },
+      { key: 'emailVerified', label: 'Email Verified' },
+      { key: 'joined', label: 'Joined At' },
+    ]);
+
+    await logExport(req, `${rows.length} user accounts`);
+    sendCsv(res, `lifevault-users-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** GET /admin/export/activity — activity logs as CSV (optional from/to) */
+exports.exportActivity = async (req, res, next) => {
+  try {
+    const filter = buildDateFilter(req);
+    const logs = await ActivityLog.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(EXPORT_ROW_LIMIT)
+      .populate('userId', 'name email');
+
+    const rows = logs.map((log) => ({
+      action: log.action,
+      user: log.userId?.name || 'System',
+      email: log.userId?.email || '',
+      description: log.description,
+      ipAddress: log.ipAddress,
+      time: log.createdAt?.toISOString(),
+    }));
+
+    const csv = toCsv(rows, [
+      { key: 'action', label: 'Action' },
+      { key: 'user', label: 'User' },
+      { key: 'email', label: 'Email' },
+      { key: 'description', label: 'Description' },
+      { key: 'ipAddress', label: 'IP Address' },
+      { key: 'time', label: 'Time' },
+    ]);
+
+    await logExport(req, `${rows.length} activity log entries`);
+    sendCsv(res, `lifevault-activity-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** GET /admin/export/scans — QR scan history as CSV (optional from/to) */
+exports.exportScans = async (req, res, next) => {
+  try {
+    const filter = buildDateFilter(req, 'scannedAt');
+    const scans = await QRScan.find(filter)
+      .sort({ scannedAt: -1 })
+      .limit(EXPORT_ROW_LIMIT)
+      .populate('userId', 'name email');
+
+    const rows = scans.map((scan) => ({
+      user: scan.userId?.name || 'Unknown',
+      email: scan.userId?.email || '',
+      location: scan.scannerArea || 'Unknown',
+      ipAddress: scan.scannerIp,
+      scannedAt: scan.scannedAt?.toISOString(),
+    }));
+
+    const csv = toCsv(rows, [
+      { key: 'user', label: 'User' },
+      { key: 'email', label: 'Email' },
+      { key: 'location', label: 'Scanner Location' },
+      { key: 'ipAddress', label: 'Scanner IP' },
+      { key: 'scannedAt', label: 'Scanned At' },
+    ]);
+
+    await logExport(req, `${rows.length} QR scan records`);
+    sendCsv(res, `lifevault-qr-scans-${new Date().toISOString().slice(0, 10)}.csv`, csv);
   } catch (error) {
     next(error);
   }
