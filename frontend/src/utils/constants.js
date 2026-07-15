@@ -90,6 +90,7 @@ export const ROUTES = Object.freeze({
   TIMELINE: '/timeline',
   ADMIN: '/admin',
   ADMIN_USERS: '/admin/users',
+  ADMIN_ACTIVITY: '/admin/activity',
 });
 
 // ── Toast Config ────────────────────────────────────────────────────────────

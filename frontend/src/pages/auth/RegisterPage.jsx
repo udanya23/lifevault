@@ -11,7 +11,17 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaUser, FaEnvelope, FaLock, FaShieldAlt, FaChevronRight } from 'react-icons/fa';
+import {
+  FaUser,
+  FaEnvelope,
+  FaLock,
+  FaShieldAlt,
+  FaChevronRight,
+  FaUserShield,
+  FaHeartbeat,
+  FaKey,
+  FaCheck,
+} from 'react-icons/fa';
 
 import {
   registerUser,
@@ -39,10 +49,87 @@ const detailsSchema = yup.object({
   password: yup.string().required('Password is required').min(8)
     .matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$/, 'Must include upper, lower, number & symbol'),
   confirmPassword: yup.string().required('Confirm password').oneOf([yup.ref('password')], 'Passwords do not match'),
+  role: yup.string().oneOf(['user', 'admin']).required(),
+  adminCode: yup.string().when('role', {
+    is: 'admin',
+    then: (schema) => schema.trim().required('Admin access code is required'),
+    otherwise: (schema) => schema.notRequired(),
+  }),
   acceptTerms: yup.boolean().oneOf([true], 'Accept terms to continue'),
 });
 
 const STEPS = { EMAIL: 1, OTP: 2, DETAILS: 3 };
+
+// ── Role Selector ─────────────────────────────────────────────────────────────
+const ROLE_OPTIONS = [
+  {
+    value: 'user',
+    label: 'Personal Account',
+    desc: 'Manage your own health vault',
+    icon: FaHeartbeat,
+    accent: 'from-blue-600 to-indigo-600',
+    ring: 'ring-blue-500/40',
+  },
+  {
+    value: 'admin',
+    label: 'Administrator',
+    desc: 'Requires an admin access code',
+    icon: FaUserShield,
+    accent: 'from-violet-600 to-purple-600',
+    ring: 'ring-violet-500/40',
+  },
+];
+
+const RoleSelector = ({ value, onChange }) => (
+  <div role="radiogroup" aria-label="Account type" className="grid grid-cols-2 gap-3">
+    {ROLE_OPTIONS.map((opt) => {
+      const isSelected = value === opt.value;
+      return (
+        <button
+          key={opt.value}
+          type="button"
+          role="radio"
+          aria-checked={isSelected}
+          onClick={() => onChange(opt.value)}
+          className={`relative text-left p-3.5 rounded-xl border-2 transition-all duration-200 cursor-pointer group
+            ${
+              isSelected
+                ? `border-transparent bg-gradient-to-br ${opt.accent} text-white shadow-lg ring-2 ${opt.ring} ring-offset-2 dark:ring-offset-slate-900`
+                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600 hover:-translate-y-0.5'
+            }`}
+        >
+          {isSelected && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center"
+            >
+              <FaCheck className="h-2.5 w-2.5 text-white" aria-hidden="true" />
+            </motion.span>
+          )}
+          <div
+            className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2.5 transition-transform duration-200 group-hover:scale-105
+              ${
+                isSelected
+                  ? 'bg-white/20'
+                  : opt.value === 'admin'
+                    ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400'
+                    : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+              }`}
+          >
+            <opt.icon className={`h-4 w-4 ${isSelected ? 'text-white' : ''}`} aria-hidden="true" />
+          </div>
+          <p className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+            {opt.label}
+          </p>
+          <p className={`text-[10px] mt-0.5 leading-snug ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
+            {opt.desc}
+          </p>
+        </button>
+      );
+    })}
+  </div>
+);
 
 const STEP_LABELS = ['Email', 'Verify', 'Account'];
 
@@ -104,9 +191,17 @@ const RegisterPage = () => {
   const emailForm = useForm({ resolver: yupResolver(emailSchema), defaultValues: { email: '' } });
   const detailsForm = useForm({
     resolver: yupResolver(detailsSchema),
-    defaultValues: { name: '', password: '', confirmPassword: '', acceptTerms: false },
+    defaultValues: {
+      name: '',
+      password: '',
+      confirmPassword: '',
+      role: 'user',
+      adminCode: '',
+      acceptTerms: false,
+    },
   });
   const passwordValue = detailsForm.watch('password', '');
+  const selectedRole = detailsForm.watch('role', 'user');
 
   useEffect(() => { dispatch(clearAuthError()); }, [dispatch]);
   useEffect(() => {
@@ -154,11 +249,14 @@ const RegisterPage = () => {
     }
   };
 
-  const handleRegister = async ({ name, password }) => {
-    const result = await dispatch(registerUser({ name, email, password }));
+  const handleRegister = async ({ name, password, role, adminCode }) => {
+    const payload = { name, email, password, role };
+    if (role === 'admin') payload.adminCode = adminCode.trim();
+
+    const result = await dispatch(registerUser(payload));
     if (registerUser.fulfilled.match(result)) {
-      toast.success('Welcome to LifeVault!');
-      navigate(ROUTES.DASHBOARD, { replace: true });
+      toast.success(role === 'admin' ? 'Admin account created. Welcome!' : 'Welcome to LifeVault!');
+      navigate(role === 'admin' ? ROUTES.ADMIN : ROUTES.DASHBOARD, { replace: true });
     } else {
       toast.error(result.payload?.message || 'Registration failed.');
     }
@@ -329,6 +427,50 @@ const RegisterPage = () => {
                       </p>
                     )}
                     <form onSubmit={detailsForm.handleSubmit(handleRegister)} className="space-y-4" noValidate>
+                      {/* Account type */}
+                      <div>
+                        <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-2">
+                          Account Type
+                        </label>
+                        <RoleSelector
+                          value={selectedRole}
+                          onChange={(role) =>
+                            detailsForm.setValue('role', role, { shouldValidate: true })
+                          }
+                        />
+                      </div>
+
+                      {/* Admin access code (revealed for admin role) */}
+                      <AnimatePresence initial={false}>
+                        {selectedRole === 'admin' && (
+                          <motion.div
+                            key="admin-code"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.25, ease: 'easeOut' }}
+                            className="overflow-hidden"
+                          >
+                            <div className="p-3.5 rounded-xl bg-violet-50/70 dark:bg-violet-950/20 border border-violet-200/60 dark:border-violet-800/30 space-y-2.5">
+                              <Input
+                                label="Admin Access Code"
+                                type="password"
+                                icon={FaKey}
+                                placeholder="Enter the secret admin code"
+                                error={detailsForm.formState.errors.adminCode?.message}
+                                autoComplete="off"
+                                {...detailsForm.register('adminCode')}
+                              />
+                              <p className="text-[11px] text-violet-600/80 dark:text-violet-400/80 leading-snug flex items-start gap-1.5">
+                                <FaUserShield className="h-3 w-3 mt-0.5 shrink-0" aria-hidden="true" />
+                                Admin accounts can manage users and platform data. The access
+                                code is provided by the platform owner.
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
                       <Input
                         label="Full Name"
                         icon={FaUser}
@@ -374,7 +516,7 @@ const RegisterPage = () => {
                         icon={FaChevronRight}
                         iconPosition="right"
                       >
-                        Create Account
+                        {selectedRole === 'admin' ? 'Create Admin Account' : 'Create Account'}
                       </Button>
                     </form>
                   </motion.div>

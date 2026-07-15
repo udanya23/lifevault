@@ -10,6 +10,8 @@ export const adminAPI = {
   getUsers: (params = {}) =>
     axiosInstance.get('/admin/users', { params }),
 
+  getUserDetail: (id) => axiosInstance.get(`/admin/users/${id}`),
+
   updateUserStatus: (id, data) =>
     axiosInstance.patch(`/admin/users/${id}/status`, data),
 

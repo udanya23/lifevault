@@ -11,6 +11,7 @@ const { ROLES } = require('../utils/constants');
 const {
   updateStatusRules,
   getUsersQuery,
+  getReportsQuery,
   userIdParam,
 } = require('../validators/admin.validators');
 
@@ -19,8 +20,9 @@ router.use(authorize(ROLES.ADMIN));
 
 router.get('/analytics', adminController.getAnalytics);
 router.get('/users', getUsersQuery, adminController.getUsers);
+router.get('/users/:id', userIdParam, adminController.getUserDetail);
 router.patch('/users/:id/status', updateStatusRules, adminController.updateUserStatus);
 router.delete('/users/:id', userIdParam, adminController.deleteUser);
-router.get('/reports', adminController.getReports);
+router.get('/reports', getReportsQuery, adminController.getReports);
 
 module.exports = router;

@@ -33,6 +33,20 @@ export const fetchUsers = createAsyncThunk(
   }
 );
 
+export const fetchUserDetail = createAsyncThunk(
+  'admin/fetchUserDetail',
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await adminAPI.getUserDetail(id);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data || { message: 'Failed to load user detail' }
+      );
+    }
+  }
+);
+
 export const updateUserStatus = createAsyncThunk(
   'admin/updateUserStatus',
   async ({ id, ...data }, { rejectWithValue }) => {
@@ -79,10 +93,12 @@ const initialState = {
   analytics: null,
   users: [],
   usersMeta: { page: 1, limit: 10, total: 0, totalPages: 0 },
+  userDetail: null,
   reports: [],
-  reportsMeta: { page: 1, limit: 20, total: 0, totalPages: 0 },
+  reportsMeta: { page: 1, limit: 20, total: 0, totalPages: 0, actions: [] },
   isLoadingAnalytics: false,
   isLoadingUsers: false,
+  isLoadingUserDetail: false,
   isLoadingReports: false,
   error: null,
 };
@@ -93,6 +109,9 @@ const adminSlice = createSlice({
   reducers: {
     clearAdminError: (state) => {
       state.error = null;
+    },
+    clearUserDetail: (state) => {
+      state.userDetail = null;
     },
   },
   extraReducers: (builder) => {
@@ -121,6 +140,19 @@ const adminSlice = createSlice({
       })
       .addCase(fetchUsers.rejected, (state, action) => {
         state.isLoadingUsers = false;
+        state.error = action.payload?.message;
+      })
+
+      .addCase(fetchUserDetail.pending, (state) => {
+        state.isLoadingUserDetail = true;
+        state.userDetail = null;
+      })
+      .addCase(fetchUserDetail.fulfilled, (state, action) => {
+        state.isLoadingUserDetail = false;
+        state.userDetail = action.payload.data;
+      })
+      .addCase(fetchUserDetail.rejected, (state, action) => {
+        state.isLoadingUserDetail = false;
         state.error = action.payload?.message;
       })
 
@@ -157,12 +189,16 @@ const adminSlice = createSlice({
   },
 });
 
-export const { clearAdminError } = adminSlice.actions;
+export const { clearAdminError, clearUserDetail } = adminSlice.actions;
 
 export const selectAdminAnalytics = (state) => state.admin.analytics;
 export const selectAdminUsers = (state) => state.admin.users;
 export const selectAdminUsersMeta = (state) => state.admin.usersMeta;
+export const selectAdminUserDetail = (state) => state.admin.userDetail;
+export const selectAdminUserDetailLoading = (state) => state.admin.isLoadingUserDetail;
 export const selectAdminReports = (state) => state.admin.reports;
+export const selectAdminReportsMeta = (state) => state.admin.reportsMeta;
+export const selectAdminReportsLoading = (state) => state.admin.isLoadingReports;
 export const selectAdminLoading = (state) => state.admin.isLoadingAnalytics;
 export const selectAdminUsersLoading = (state) => state.admin.isLoadingUsers;
 

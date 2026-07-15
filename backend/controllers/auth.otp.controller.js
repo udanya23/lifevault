@@ -2,11 +2,12 @@
  * controllers/auth.otp.controller.js — OTP-based registration & password reset
  */
 
+const crypto = require('crypto');
 const User = require('../models/User');
 const PendingRegistration = require('../models/PendingRegistration');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
-const { COOKIES } = require('../utils/constants');
+const { COOKIES, ROLES } = require('../utils/constants');
 const {
   generateOtp,
   hashOtp,
@@ -138,8 +139,21 @@ exports.verifyRegistrationOtp = async (req, res, next) => {
   }
 };
 
+/**
+ * Timing-safe comparison of the submitted admin code against the
+ * ADMIN_REGISTRATION_CODE env secret (prevents timing attacks).
+ */
+const isValidAdminCode = (submittedCode) => {
+  const secret = process.env.ADMIN_REGISTRATION_CODE;
+  if (!secret || !submittedCode) return false;
+
+  const secretHash = crypto.createHash('sha256').update(secret).digest();
+  const submittedHash = crypto.createHash('sha256').update(submittedCode).digest();
+  return crypto.timingSafeEqual(secretHash, submittedHash);
+};
+
 exports.registerAfterOtp = async (req, res, next) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, role, adminCode } = req.body;
 
   try {
     const existingUser = await User.findOne({ email });
@@ -154,10 +168,19 @@ exports.registerAfterOtp = async (req, res, next) => {
       );
     }
 
+    // Admin registration requires the secret access code (set by the platform owner)
+    const wantsAdmin = role === ROLES.ADMIN;
+    if (wantsAdmin && !isValidAdminCode(adminCode)) {
+      return next(
+        ApiError.forbidden('Invalid admin access code. Contact the platform owner for access.')
+      );
+    }
+
     const user = new User({
       name,
       email,
       password,
+      role: wantsAdmin ? ROLES.ADMIN : ROLES.USER,
       isEmailVerified: true,
     });
     await user.save();
@@ -172,8 +195,10 @@ exports.registerAfterOtp = async (req, res, next) => {
 
     await ActivityLog.create({
       userId: user._id,
-      action: 'Register',
-      description: 'New LifeVault account created via OTP verification.',
+      action: wantsAdmin ? 'Admin Register' : 'Register',
+      description: wantsAdmin
+        ? 'New administrator account created with a valid admin access code.'
+        : 'New LifeVault account created via OTP verification.',
       ipAddress: req.ip || 'Unknown',
       userAgent: req.headers['user-agent'] || 'Unknown',
     });

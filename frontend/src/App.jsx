@@ -37,6 +37,7 @@ import QRCodePage from '@/pages/qr/QRCodePage';
 import EmergencyPage from '@/pages/emergency/EmergencyPage';
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
+import AdminActivityPage from '@/pages/admin/AdminActivityPage';
 import ActivityLogPage from '@/pages/activity/ActivityLogPage';
 import TimelinePage from '@/pages/timeline/TimelinePage';
 import SettingsPage from '@/pages/settings/SettingsPage';
@@ -203,6 +204,7 @@ function App() {
         <Route element={<AppLayout />}>
           <Route path={ROUTES.ADMIN} element={<AdminDashboardPage />} />
           <Route path={ROUTES.ADMIN_USERS} element={<AdminUsersPage />} />
+          <Route path={ROUTES.ADMIN_ACTIVITY} element={<AdminActivityPage />} />
         </Route>
       </Route>
 

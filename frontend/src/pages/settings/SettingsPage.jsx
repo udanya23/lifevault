@@ -42,6 +42,7 @@ import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import Badge from '@/components/common/Badge';
 import Modal from '@/components/common/Modal';
+import Avatar from '@/components/common/Avatar';
 
 const nameSchema = yup.object().shape({
   name: yup
@@ -177,7 +178,7 @@ const SettingsPage = () => {
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6 text-left max-w-2xl"
+      className="space-y-6 text-left"
     >
       <div>
         <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white">
@@ -188,157 +189,195 @@ const SettingsPage = () => {
         </p>
       </div>
 
-      {/* Account Information */}
-      <Card variant="default" accent className="border-slate-200 dark:border-slate-700/80">
-        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-4 select-none">
-          <FaUser className="text-blue-500" aria-hidden="true" /> Account Information
-        </h3>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+        {/* ── Left column: account & security forms ── */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Account Information */}
+          <Card variant="default" accent className="border-slate-200 dark:border-slate-700/80">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-4 select-none">
+              <FaUser className="text-blue-500" aria-hidden="true" /> Account Information
+            </h3>
 
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1.5 select-none">
-              Email Address
-            </label>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <FaEnvelope className="h-4 w-4 text-slate-400" aria-hidden="true" />
-              <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{user.email}</span>
-              {user.isEmailVerified ? (
-                <Badge variant="success" size="sm" dot>Verified</Badge>
-              ) : (
-                <Badge variant="warning" size="sm" dot>Unverified</Badge>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1.5 select-none">
+                  Email Address
+                </label>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <FaEnvelope className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{user.email}</span>
+                  {user.isEmailVerified ? (
+                    <Badge variant="success" size="sm" dot>Verified</Badge>
+                  ) : (
+                    <Badge variant="warning" size="sm" dot>Unverified</Badge>
+                  )}
+                </div>
+              </div>
+
+              {!user.isEmailVerified && (
+                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 flex items-start gap-3">
+                  <FaExclamationTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" aria-hidden="true" />
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                      Please verify your email address to secure your account.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      className="mt-2.5"
+                      isLoading={resendingEmail}
+                      onClick={handleResendVerification}
+                    >
+                      Resend Verification Email
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={nameForm.handleSubmit(onUpdateName)} className="space-y-3 pt-1">
+                <Input
+                  label="Display Name"
+                  icon={FaUser}
+                  error={nameForm.formState.errors.name?.message}
+                  required
+                  {...nameForm.register('name')}
+                />
+                <Button type="submit" size="sm" isLoading={savingName}>
+                  Save Name
+                </Button>
+              </form>
+            </div>
+          </Card>
+
+          {/* Change Password */}
+          <Card variant="default" className="border-slate-200 dark:border-slate-700/80">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-4 select-none">
+              <FaLock className="text-emerald-500" aria-hidden="true" /> Change Password
+            </h3>
+            <form onSubmit={passwordForm.handleSubmit(onChangePassword)} className="space-y-4">
+              <Input
+                label="Current Password"
+                type="password"
+                icon={FaLock}
+                error={passwordForm.formState.errors.currentPassword?.message}
+                required
+                {...passwordForm.register('currentPassword')}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="New Password"
+                  type="password"
+                  icon={FaLock}
+                  error={passwordForm.formState.errors.newPassword?.message}
+                  required
+                  {...passwordForm.register('newPassword')}
+                />
+                <Input
+                  label="Confirm New Password"
+                  type="password"
+                  icon={FaLock}
+                  error={passwordForm.formState.errors.confirmPassword?.message}
+                  required
+                  {...passwordForm.register('confirmPassword')}
+                />
+              </div>
+              <Button type="submit" size="sm" isLoading={changingPassword} icon={FaShieldAlt}>
+                Update Password
+              </Button>
+            </form>
+          </Card>
+        </div>
+
+        {/* ── Right column: profile summary, appearance, danger zone ── */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Profile Summary */}
+          <Card variant="default" className="border-slate-200 dark:border-slate-700/80 overflow-hidden">
+            <div
+              className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-r from-blue-600 to-indigo-600"
+              aria-hidden="true"
+            />
+            <div className="relative pt-6 flex flex-col items-center text-center">
+              <Avatar
+                src={user.profilePhoto?.url}
+                name={user.name}
+                size="xl"
+                ring
+                className="shadow-lg"
+              />
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white mt-3">
+                {user.name}
+              </h3>
+              <p className="text-xs text-slate-500 truncate max-w-full">{user.email}</p>
+              <div className="flex items-center gap-2 mt-2.5 flex-wrap justify-center">
+                {user.role === 'admin' ? (
+                  <Badge variant="purple" size="sm" icon={FaShieldAlt}>Administrator</Badge>
+                ) : (
+                  <Badge variant="primary" size="sm">Personal Account</Badge>
+                )}
+                {user.isEmailVerified && <Badge variant="success" size="sm" dot>Verified</Badge>}
+              </div>
+              {memberSince && (
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-3 font-semibold">
+                  Member since {formatDate(memberSince, { month: 'long', year: 'numeric' })}
+                </p>
               )}
             </div>
-          </div>
+          </Card>
 
-          {!user.isEmailVerified && (
-            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 flex items-start gap-3">
-              <FaExclamationTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" aria-hidden="true" />
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-                  Please verify your email address to secure your account.
+          {/* Appearance */}
+          <Card variant="default" className="border-slate-200 dark:border-slate-700/80">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-4 select-none">
+              {isDarkMode ? (
+                <FaMoon className="text-indigo-500" aria-hidden="true" />
+              ) : (
+                <FaSun className="text-amber-500" aria-hidden="true" />
+              )}
+              Appearance
+            </h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                  Dark Mode
                 </p>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  className="mt-2.5"
-                  isLoading={resendingEmail}
-                  onClick={handleResendVerification}
-                >
-                  Resend Verification Email
-                </Button>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Switch between light and dark visual themes.
+                </p>
               </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isDarkMode}
+                onClick={() => dispatch(setDarkMode(!isDarkMode))}
+                className={`
+                  relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-250 cursor-pointer outline-none
+                  ${isDarkMode ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}
+                `}
+              >
+                <span
+                  className={`
+                    inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200
+                    ${isDarkMode ? 'translate-x-6' : 'translate-x-1'}
+                  `}
+                />
+              </button>
             </div>
-          )}
+          </Card>
 
-          <form onSubmit={nameForm.handleSubmit(onUpdateName)} className="space-y-3 pt-1">
-            <Input
-              label="Display Name"
-              icon={FaUser}
-              error={nameForm.formState.errors.name?.message}
-              required
-              {...nameForm.register('name')}
-            />
-            <Button type="submit" size="sm" isLoading={savingName}>
-              Save Name
+          {/* Danger Zone */}
+          <Card variant="default" className="border-red-200/80 dark:border-red-950/40 bg-red-50/10 dark:bg-red-950/5">
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-red-500 rounded-t-2xl" aria-hidden="true" />
+            <h3 className="text-sm font-bold text-red-650 dark:text-red-400 flex items-center gap-2 mb-2 select-none">
+              <FaTrash aria-hidden="true" /> Danger Zone
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed font-semibold">
+              Permanently delete your account and all secure documents, medical records, and contacts. This operation cannot be undone.
+            </p>
+            <Button variant="danger" size="sm" icon={FaTrash} onClick={() => setShowDeleteModal(true)}>
+              Delete My Account
             </Button>
-          </form>
-
-          {memberSince && (
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-2 font-semibold">
-              Member since {formatDate(memberSince, { month: 'long', year: 'numeric' })}
-            </p>
-          )}
+          </Card>
         </div>
-      </Card>
-
-      {/* Change Password */}
-      <Card variant="default" className="border-slate-200 dark:border-slate-700/80">
-        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-4 select-none">
-          <FaLock className="text-emerald-500" aria-hidden="true" /> Change Password
-        </h3>
-        <form onSubmit={passwordForm.handleSubmit(onChangePassword)} className="space-y-4">
-          <Input
-            label="Current Password"
-            type="password"
-            icon={FaLock}
-            error={passwordForm.formState.errors.currentPassword?.message}
-            required
-            {...passwordForm.register('currentPassword')}
-          />
-          <Input
-            label="New Password"
-            type="password"
-            icon={FaLock}
-            error={passwordForm.formState.errors.newPassword?.message}
-            required
-            {...passwordForm.register('newPassword')}
-          />
-          <Input
-            label="Confirm New Password"
-            type="password"
-            icon={FaLock}
-            error={passwordForm.formState.errors.confirmPassword?.message}
-            required
-            {...passwordForm.register('confirmPassword')}
-          />
-          <Button type="submit" size="sm" isLoading={changingPassword} icon={FaShieldAlt}>
-            Update Password
-          </Button>
-        </form>
-      </Card>
-
-      {/* Appearance */}
-      <Card variant="default" className="border-slate-200 dark:border-slate-700/80">
-        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-4 select-none">
-          {isDarkMode ? (
-            <FaMoon className="text-indigo-500" aria-hidden="true" />
-          ) : (
-            <FaSun className="text-amber-500" aria-hidden="true" />
-          )}
-          Appearance
-        </h3>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-              Dark Mode
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Switch between light and dark visual themes.
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isDarkMode}
-            onClick={() => dispatch(setDarkMode(!isDarkMode))}
-            className={`
-              relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-250 cursor-pointer outline-none
-              ${isDarkMode ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}
-            `}
-          >
-            <span
-              className={`
-                inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200
-                ${isDarkMode ? 'translate-x-6' : 'translate-x-1'}
-              `}
-            />
-          </button>
-        </div>
-      </Card>
-
-      {/* Danger Zone */}
-      <Card variant="default" className="border-red-200/80 dark:border-red-950/40 bg-red-50/10 dark:bg-red-950/5">
-        <div className="absolute top-0 left-0 right-0 h-[3px] bg-red-500 rounded-t-2xl" aria-hidden="true" />
-        <h3 className="text-sm font-bold text-red-650 dark:text-red-400 flex items-center gap-2 mb-2 select-none">
-          <FaTrash aria-hidden="true" /> Danger Zone
-        </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed font-semibold">
-          Permanently delete your account and all secure documents, medical records, and contacts. This operation cannot be undone.
-        </p>
-        <Button variant="danger" size="sm" icon={FaTrash} onClick={() => setShowDeleteModal(true)}>
-          Delete My Account
-        </Button>
-      </Card>
+      </div>
 
       {/* Delete Account Modal */}
       <Modal

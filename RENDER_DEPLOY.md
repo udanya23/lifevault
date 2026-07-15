@@ -58,6 +58,7 @@ This guide uses the **reliable Render setup**:
 | `EMAIL_PASS` | Gmail App Password |
 | `EMAIL_FROM_NAME` | `LifeVault` |
 | `EMAIL_FROM_ADDRESS` | your Gmail |
+| `ADMIN_REGISTRATION_CODE` | secret code for admin sign-up (leave unset to disable admin self-registration) |
 
 5. Click **Create Web Service** and wait until it is **Live**.
 6. Open: `https://lifevault-api-XXXX.onrender.com/health`  

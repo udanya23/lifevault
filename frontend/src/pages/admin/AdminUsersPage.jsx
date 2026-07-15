@@ -15,6 +15,7 @@ import {
   FaBan,
   FaCheckCircle,
   FaTrash,
+  FaEye,
   FaChevronLeft,
   FaChevronRight,
   FaArrowLeft,
@@ -22,12 +23,14 @@ import {
 
 import {
   fetchUsers,
+  fetchUserDetail,
   updateUserStatus,
   deleteUser,
   selectAdminUsers,
   selectAdminUsersMeta,
   selectAdminUsersLoading,
 } from '@/features/admin/adminSlice';
+import UserDetailModal from '@/components/admin/UserDetailModal';
 import { ROUTES } from '@/utils/constants';
 import { formatDate } from '@/utils/helpers';
 import Button from '@/components/common/Button';
@@ -56,6 +59,7 @@ const AdminUsersPage = () => {
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [viewTarget, setViewTarget] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
   // Debounce search input
@@ -78,7 +82,7 @@ const AdminUsersPage = () => {
     setPage(1);
   };
 
-  const handleSuspendToggle = async (user) => {
+  const handleSuspendToggle = async (user, { refreshDetail = false } = {}) => {
     setActionLoading(user._id);
     try {
       await dispatch(
@@ -90,6 +94,7 @@ const AdminUsersPage = () => {
       toast.success(
         user.isSuspended ? 'User unsuspended successfully.' : 'User suspended successfully.'
       );
+      if (refreshDetail) dispatch(fetchUserDetail(user._id));
     } catch (err) {
       toast.error(err?.message || 'Failed to update user status.');
     } finally {
@@ -218,6 +223,14 @@ const AdminUsersPage = () => {
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-end gap-2">
                         <Button
+                          variant="outline"
+                          size="sm"
+                          icon={FaEye}
+                          onClick={() => setViewTarget(user)}
+                        >
+                          View
+                        </Button>
+                        <Button
                           variant={user.isSuspended ? 'success' : 'outline'}
                           size="sm"
                           icon={user.isSuspended ? FaCheckCircle : FaBan}
@@ -273,6 +286,19 @@ const AdminUsersPage = () => {
           </div>
         )}
       </Card>
+
+      {/* User Detail Drill-down */}
+      <UserDetailModal
+        userId={viewTarget?._id}
+        isOpen={!!viewTarget}
+        onClose={() => setViewTarget(null)}
+        onSuspendToggle={(user) => handleSuspendToggle(user, { refreshDetail: true })}
+        onDelete={(user) => {
+          setViewTarget(null);
+          setDeleteTarget(user);
+        }}
+        actionLoading={actionLoading === viewTarget?._id}
+      />
 
       {/* Delete Confirmation */}
       <Modal

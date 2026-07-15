@@ -163,6 +163,17 @@ const registerAfterOtpRules = [
       'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
     ),
 
+  body('role')
+    .optional()
+    .isIn(['user', 'admin'])
+    .withMessage('Role must be either user or admin'),
+
+  body('adminCode')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Admin code too long'),
+
   validate,
 ];
 

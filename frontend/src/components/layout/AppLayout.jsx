@@ -21,6 +21,8 @@ import {
   FaCog,
   FaHistory,
   FaShieldAlt,
+  FaUsersCog,
+  FaClipboardList,
   FaStream,
   FaBars,
   FaMoon,
@@ -57,11 +59,11 @@ const MENU_ITEMS = [
   { label: 'Settings',         path: ROUTES.SETTINGS,   icon: FaCog },
 ];
 
-const ADMIN_ITEM = {
-  label: 'Admin Panel',
-  path: ROUTES.ADMIN,
-  icon: FaShieldAlt,
-};
+const ADMIN_ITEMS = [
+  { label: 'Admin Overview',   path: ROUTES.ADMIN,          icon: FaShieldAlt, end: true },
+  { label: 'User Management',  path: ROUTES.ADMIN_USERS,    icon: FaUsersCog },
+  { label: 'System Activity',  path: ROUTES.ADMIN_ACTIVITY, icon: FaClipboardList },
+];
 
 const PAGE_TITLES = {
   [ROUTES.DASHBOARD]: 'Dashboard',
@@ -72,12 +74,15 @@ const PAGE_TITLES = {
   [ROUTES.SETTINGS]:  'Account Settings',
   [ROUTES.ACTIVITY]:  'Activity Logs',
   [ROUTES.ADMIN]:     'Admin Control Center',
+  [ROUTES.ADMIN_USERS]:    'User Management',
+  [ROUTES.ADMIN_ACTIVITY]: 'System Activity',
 };
 
 // ── Nav Link ──────────────────────────────────────────────────────────────────
 const SidebarLink = ({ item, isCollapsed }) => (
   <NavLink
     to={item.path}
+    end={item.end}
     title={isCollapsed ? item.label : undefined}
     className={({ isActive }) =>
       `relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold
@@ -120,7 +125,14 @@ const SidebarNav = ({ isCollapsed, userRole }) => (
     {userRole === 'admin' && (
       <>
         <div className={`pt-3.5 mt-3.5 border-t border-slate-800 ${isCollapsed ? 'px-0' : ''}`} />
-        <SidebarLink item={ADMIN_ITEM} isCollapsed={isCollapsed} />
+        {!isCollapsed && (
+          <p className="px-3.5 pb-1 text-[9px] font-extrabold uppercase tracking-[0.18em] text-slate-500">
+            Administration
+          </p>
+        )}
+        {ADMIN_ITEMS.map((item) => (
+          <SidebarLink key={item.path} item={item} isCollapsed={isCollapsed} />
+        ))}
       </>
     )}
   </div>

@@ -27,8 +27,19 @@ const getUsersQuery = [
   validate,
 ];
 
+const getReportsQuery = [
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+  query('search').optional().trim().isLength({ max: 120 }).withMessage('Search query too long'),
+  query('action').optional().trim().isLength({ max: 80 }).withMessage('Action filter too long'),
+  query('from').optional().isISO8601().withMessage('Invalid from date'),
+  query('to').optional().isISO8601().withMessage('Invalid to date'),
+  validate,
+];
+
 module.exports = {
   userIdParam,
   updateStatusRules,
   getUsersQuery,
+  getReportsQuery,
 };

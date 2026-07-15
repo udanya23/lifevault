@@ -12,6 +12,7 @@ const EmergencyContact = require('../models/EmergencyContact');
 const Document = require('../models/Document');
 const ActivityLog = require('../models/ActivityLog');
 const QRScan = require('../models/QRScan');
+const HealthTimelineEvent = require('../models/HealthTimelineEvent');
 const { deleteFromCloudinary } = require('../config/cloudinary');
 
 /**
@@ -19,15 +20,25 @@ const { deleteFromCloudinary } = require('../config/cloudinary');
  * @param {string} userId
  */
 const deleteUserAndData = async (userId) => {
-  const [documents, user] = await Promise.all([
+  const [documents, user, timelineEvents] = await Promise.all([
     Document.find({ userId }),
     User.findById(userId),
+    HealthTimelineEvent.find({ userId }),
   ]);
 
   // Remove Cloudinary assets for documents
   for (const doc of documents) {
     const isPDF = doc.fileUrl?.endsWith('.pdf');
     await deleteFromCloudinary(doc.publicId, isPDF ? 'raw' : 'image');
+  }
+
+  // Remove Cloudinary assets for timeline attachments
+  for (const event of timelineEvents) {
+    for (const attachment of event.attachments || []) {
+      if (!attachment.publicId) continue;
+      const isPDF = attachment.mimeType === 'application/pdf' || attachment.fileUrl?.endsWith('.pdf');
+      await deleteFromCloudinary(attachment.publicId, isPDF ? 'raw' : 'image');
+    }
   }
 
   // Remove profile photo from Cloudinary
@@ -42,6 +53,7 @@ const deleteUserAndData = async (userId) => {
     EmergencyContact.deleteMany({ userId }),
     ActivityLog.deleteMany({ userId }),
     QRScan.deleteMany({ userId }),
+    HealthTimelineEvent.deleteMany({ userId }),
     User.deleteOne({ _id: userId }),
   ]);
 };
